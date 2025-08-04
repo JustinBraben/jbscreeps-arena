@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "module": "esnext",
-    "lib": ["esnext"],
+    "lib": [
+      "esnext"
+    ],
     "target": "es2017",
     "moduleResolution": "Node",
     "outDir": "dist",
@@ -12,7 +14,13 @@
     "noImplicitReturns": true,
     "allowSyntheticDefaultImports": true,
     "allowUnreachableCode": false,
-    "typeRoots": ["./node_modules/@types", "./@types", "./node_modules/@types/screeps-arena/dist"]
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/@types",
+      "./node_modules/@types/screeps-arena/dist"
+    ]
   },
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }
