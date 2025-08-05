@@ -1,6 +1,6 @@
-import { getObjectsByPrototype, getObjectById, getObjects } from 'game/utils';
+import { getObjectsByPrototype, getObjectById, getObjects, findPath } from 'game/utils';
 import { ATTACK, MOVE, CARRY, RANGED_ATTACK, HEAL, TOUGH, WORK } from 'game/constants';
-import { StructureSpawn, StructureContainer, Creep, StructureWall, Id, Position } from 'game/prototypes';
+import { StructureSpawn, StructureContainer, Creep, StructureWall, Id, Position, Source } from 'game/prototypes';
 import { Visual } from 'game/visual';
 import { CreepManager } from './creepManager';
 
@@ -9,7 +9,13 @@ let creepManager = new CreepManager();
 // Track build order
 let buildQueue: Array<string> = [];
 
+// let pathVisualSet: Set<Visual> = new Set<Visual>();
+let gameVisual = new Visual(2, true);
+
 export function loop(): void {
+  // remove all visuals from gameVisual
+  gameVisual.clear();
+
   // Get our spawn
   const mySpawn = getObjectsByPrototype(StructureSpawn).find(i => i.my);
   const enemySpawn = getObjectsByPrototype(StructureSpawn).find(i => !i.my);
@@ -18,7 +24,10 @@ export function loop(): void {
   const enemies = getObjectsByPrototype(Creep).filter(c => !c.my);
 
   // Get all containers
-  const containers = getObjectsByPrototype(StructureContainer);
+  let containers = getObjectsByPrototype(StructureContainer);
+  // console.log(`containers.length: #${containers.length}`);
+  let sources = getObjectsByPrototype(Source);
+  // console.log(`sources.length: #${sources.length}`);
   const walls = getObjectsByPrototype(StructureWall).filter(c =>
       c.id == "6"  ||
       c.id == "11" ||
@@ -55,6 +64,8 @@ export function loop(): void {
 
   // Run creep logic
   creepManager.updateCreeps(containers, mySpawn, enemySpawn, walls, enemies);
+
+  debugContainerPathsToSpawn(containers, mySpawn);
 }
 
 function resetBuildQueue(): void {
@@ -117,4 +128,23 @@ function spawnCreepByRole(spawn: StructureSpawn, role: string): boolean {
   }
 
   return creepCreated;
+}
+
+function debugContainerPathsToSpawn(
+  containers: StructureContainer[],
+  mySpawn: StructureSpawn | undefined
+): void {
+  for (const container of containers) {
+    if (mySpawn === undefined) return;
+
+    const path = findPath(mySpawn, container);
+
+    gameVisual.poly(
+      path,
+      {
+        lineStyle: 'dashed',
+        stroke: '#0358ebff',
+      }
+    );
+  }
 }

@@ -2,6 +2,8 @@ import { getObjectsByPrototype, getObjectById, getObjects } from 'game/utils';
 import { ATTACK, MOVE, CARRY, RANGED_ATTACK, HEAL, TOUGH, WORK } from 'game/constants';
 import { StructureSpawn, StructureContainer, Creep, StructureWall, Id, Position } from 'game/prototypes';
 import { Visual } from 'game/visual';
+import { JBCreep } from 'common/lib/jbCreep';
+import { Role, RoleSpawnAndSwamp } from 'common/enums/role';
 
 /**
  * Tracks and records Creeps
@@ -13,14 +15,16 @@ export class CreepManager {
   melees: Array<Creep>;
   healers: Array<Creep>;
   ranged: Array<Creep>;
+  private jbCreeps: Map<string, JBCreep> = new Map<string, JBCreep>();
 
   constructor() {
     this.personalSpawn = undefined;
-    this.miners = new Array<Creep>;
-    this.wallbreakers = new Array<Creep>;
-    this.melees = new Array<Creep>;
-    this.healers = new Array<Creep>;
-    this.ranged = new Array<Creep>;
+    this.miners = new Array<Creep>();
+    this.wallbreakers = new Array<Creep>();
+    this.melees = new Array<Creep>();
+    this.healers = new Array<Creep>();
+    this.ranged = new Array<Creep>();
+    this.jbCreeps = new Map<string, JBCreep>();
   }
 
   public cleanupDeadCreeps(): void {
@@ -286,6 +290,26 @@ export class CreepManager {
         ranged.rangedAttack(enemySpawn);
       }
     });
+  }
+
+  initializeCreep(creep: Creep, role: Role, initialPos?: Position, targetPos?: Position): JBCreep {
+    const jbCreep = new JBCreep(creep, role, initialPos, targetPos);
+    this.jbCreeps.set(creep.id, jbCreep);
+    return jbCreep;
+  }
+
+  getJBCreep(creep: Creep): JBCreep | undefined {
+    return this.jbCreeps.get(creep.id);
+  }
+
+  getAllJBCreeps(): JBCreep[] {
+    return Array.from(this.jbCreeps.values());
+  }
+
+  runAll(): void {
+    for (const jbCreep of this.jbCreeps.values()) {
+      jbCreep.performRole();
+    }
   }
 
   public debugPath(creep: Creep, path: Position[]): void {
