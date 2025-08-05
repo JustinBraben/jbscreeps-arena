@@ -29,17 +29,17 @@
 
 // This stuff is arena-specific
 import { ATTACK, HEAL, RANGED_ATTACK } from "game/constants";
-import { Creep, GameObject } from "game/prototypes";
+import { Creep, GameObject, Position } from "game/prototypes";
 import { getDirection, getObjectsByPrototype, getRange, getTicks } from "game/utils";
-import { Flag } from "arena";
+import { Flag } from "arena/season_beta/capture_the_flag/basic/prototypes";
 import { Visual } from "game/visual";
 import { searchPath } from "game/path-finder";
+import { applyMixin } from 'common/prototype/applyMixin';
 
-declare module "game/prototypes" {
-  interface Creep {
-    initialPos: RoomPosition;
-  }
+class InitialPositionMixin extends Creep {
+  initialPosition: Position = { x: 0, y: 0 };
 }
+applyMixin(Creep, InitialPositionMixin);
 
 // You can also import your files like this:
 // import {roleAttacker} from './roles/attacker.mjs';
@@ -48,6 +48,7 @@ declare module "game/prototypes" {
 // The game guarantees there will be no global reset during the match.
 // Note that you cannot assign any game objects here, since they are populated on the first tick, not when the script is initialized.
 let myCreeps: Creep[];
+let myCreepsInitialPositions: Map<string, Position> = new Map<string, Position>();
 let enemyCreeps: Creep[];
 let enemyFlag: Flag | undefined;
 
@@ -81,8 +82,12 @@ export function loop(): void {
 
 function meleeAttacker(creep: Creep) {
   // Here is the alternative to the creep "memory" from Screeps World. All game objects are persistent. You can assign any property to it once, and it will be available during the entire match.
-  if (!creep.initialPos) {
-    creep.initialPos = { x: creep.x, y: creep.y };
+  // if (!creep.initialPos) {
+  //   creep.initialPos = { x: creep.x, y: creep.y };
+  // }
+
+  if (myCreepsInitialPositions.get(creep.id) === undefined) {
+    myCreepsInitialPositions.set(creep.id, { x: creep.x, y: creep.y });
   }
 
   new Visual().text(
@@ -95,15 +100,20 @@ function meleeAttacker(creep: Creep) {
       backgroundPadding: 0.03
     }
   );
+
+  const creepInitialPos = myCreepsInitialPositions.get(creep.id);
+
+  if (creepInitialPos === undefined) return;
+
   const targets = enemyCreeps
-    .filter(i => getRange(i, creep.initialPos) < 10)
+    .filter(i => getRange(i, creepInitialPos) < 10)
     .sort((a, b) => getRange(a, creep) - getRange(b, creep));
 
   if (targets.length > 0) {
     creep.moveTo(targets[0]);
     creep.attack(targets[0]);
   } else {
-    creep.moveTo(creep.initialPos);
+    creep.moveTo(creepInitialPos);
   }
 }
 

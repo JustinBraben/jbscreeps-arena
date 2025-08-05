@@ -1,5 +1,6 @@
+// common/enums/role.ts
 // Spawn and Swamp roles
-export enum RoleSpawnAndSWamp {
+export enum RoleSpawnAndSwamp {
   Miner,
   Wallbreaker,
   Melee,
@@ -7,4 +8,4 @@ export enum RoleSpawnAndSWamp {
   Ranged
 }
 
-export type Role = RoleSpawnAndSWamp;
+export type Role = RoleSpawnAndSwamp;
