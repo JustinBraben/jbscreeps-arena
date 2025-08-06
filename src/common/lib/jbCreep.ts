@@ -1,10 +1,11 @@
 // common/lib/jbCreep.ts
-import { Creep, Position, Structure, Source } from 'game/prototypes';
+import { Creep, Position, Structure, Source, StructureContainer, StructureSpawn } from 'game/prototypes';
 import { Role, RoleSpawnAndSwamp } from 'common/enums/role';
 import { Core } from 'common/core';
 import { DirectionConstant, ResourceConstant, CreepMoveResult, ERR_INVALID_ARGS } from 'game/constants'
 import { FindPathOptions } from 'game/path-finder';
 import { ScoreCollector } from "arena/season_beta/collect_and_control/basic/prototypes";
+import { getObjectById, getObjectsByPrototype } from 'game/utils';
 
 export class JBCreep {
   public readonly creep: Creep;
@@ -77,10 +78,13 @@ export class JBCreep {
   }
 
   // Role-specific behavior
-  performRole(): void {
+  performRole(
+    containers: StructureContainer[],
+    spawn: StructureSpawn | undefined
+  ): void {
     switch (this.role) {
       case RoleSpawnAndSwamp.Miner:
-        this.performMinerRole();
+        this.performMinerRole(containers, spawn);
         break;
       case RoleSpawnAndSwamp.Wallbreaker:
         this.performWallbreakerRole();
@@ -97,12 +101,49 @@ export class JBCreep {
     }
   }
 
-  private performMinerRole(): void {
-    // Implement miner logic
-    if (this.targetPosition) {
-      this.moveTo(this.targetPosition);
+  private performMinerRole(containers: StructureContainer[], spawn: StructureSpawn | undefined): void {
+    if (spawn === undefined) return;
+
+    // Skip invalid
+    if (this.creep === null ||
+        this.creep.store === null ||
+        this.creep.store === undefined ||
+        this.creep.spawning) {
+      return;
     }
-    // Add harvesting logic here
+
+    // Find the closest container with energy
+    const targetContainer = this.creep.findClosestByPath(containers.filter(c => c.store.energy > 0));
+
+    const minerFreeCapacity = this.creep.store.getFreeCapacity();
+
+    if (targetContainer && minerFreeCapacity !== null && minerFreeCapacity > 0) {
+      if (targetContainer) {
+        const minerRange = this.creep.getRangeTo(targetContainer);
+        if (minerRange > 1) {
+          // Go to closest container and withdraw energy
+          this.creep.moveTo(targetContainer);
+
+          // // DEBUG PATH
+          // let path: Position[] = miner.findPathTo(targetContainer);
+          // debugPath(miner, path);
+        }
+
+        this.creep.withdraw(targetContainer, 'energy');
+      }
+    } else {
+      const minerRange = this.creep.getRangeTo(spawn);
+      if (minerRange > 1) {
+        // Return to spawn and transfer energy
+        this.creep.moveTo(spawn);
+
+        // // DEBUG PATH
+        // let path: Position[] = miner.findPathTo(spawn);
+        // debugPath(miner, path);
+      }
+
+      this.creep.transfer(spawn, 'energy');
+    }
   }
 
   private performWallbreakerRole(): void {

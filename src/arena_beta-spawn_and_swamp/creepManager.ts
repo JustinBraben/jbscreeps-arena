@@ -1,15 +1,18 @@
 import { getObjectsByPrototype, getObjectById, getObjects } from 'game/utils';
 import { ATTACK, MOVE, CARRY, RANGED_ATTACK, HEAL, TOUGH, WORK } from 'game/constants';
 import { StructureSpawn, StructureContainer, Creep, StructureWall, Id, Position } from 'game/prototypes';
-import { Visual } from 'game/visual';
 import { JBCreep } from 'common/lib/jbCreep';
 import { Role, RoleSpawnAndSwamp } from 'common/enums/role';
+import { DefaultFindPathOptions, DefaultFleeFindPathOptions } from 'common/constants';
 
 /**
  * Tracks and records Creeps
  */
 export class CreepManager {
   personalSpawn: StructureSpawn | undefined;
+  enemySpawn: StructureSpawn | undefined;
+  mainBaseContainers: Array<StructureContainer> | undefined;
+  nextMinerContainer: number = 0;
   miners: Array<Creep>;
   wallbreakers: Array<Creep>;
   melees: Array<Creep>;
@@ -19,6 +22,9 @@ export class CreepManager {
 
   constructor() {
     this.personalSpawn = undefined;
+    this.enemySpawn = undefined;
+    this.mainBaseContainers = undefined;
+    this.nextMinerContainer = 0;
     this.miners = new Array<Creep>();
     this.wallbreakers = new Array<Creep>();
     this.melees = new Array<Creep>();
@@ -36,18 +42,128 @@ export class CreepManager {
     this.ranged = this.ranged.filter(c => c && c.hits > 0);
   }
 
-  public updateCreeps(
-    containers: StructureContainer[],
-    mySpawn: StructureSpawn | undefined,
-    enemySpawn: StructureSpawn | undefined,
-    walls: StructureWall[],
-    enemies: Creep[]
-  ): void {
-    this.runMiners(containers, mySpawn);
-    this.runWallBreakers(walls, mySpawn);
-    this.runMelees(enemies, enemySpawn);
+  public updateCreeps(): void {
+    // Get our spawn
+    if (this.personalSpawn === undefined) {
+      const mySpawn = getObjectsByPrototype(StructureSpawn).find(i => i.my);
+      if (mySpawn !== undefined){
+        this.personalSpawn = mySpawn;
+      }
+    }
+
+    // Get enemy spawn
+    if (this.enemySpawn === undefined) {
+      const enemySpawn = getObjectsByPrototype(StructureSpawn).find(i => !i.my);
+      if (enemySpawn !== undefined){
+        this.enemySpawn = enemySpawn;
+      }
+    }
+
+    // Get main base containers to harvest from
+    if (this.mainBaseContainers === undefined && this.personalSpawn !== undefined) {
+      let mainBaseContainers: Array<StructureContainer> | undefined = undefined;
+
+      if (this.personalSpawn.x === 5) {
+        mainBaseContainers = getObjectsByPrototype(StructureContainer).filter(c => c.x < 13);
+      }
+
+      if (this.personalSpawn.x === 94) {
+        mainBaseContainers = getObjectsByPrototype(StructureContainer).filter(c => c.x > 86);
+      }
+
+      if (mainBaseContainers !== undefined){
+        this.mainBaseContainers = mainBaseContainers;
+      }
+    }
+
+    // Find all enemy creeps
+    const enemies = getObjectsByPrototype(Creep).filter(c => !c.my);
+
+    // Get all containers
+    const containers = getObjectsByPrototype(StructureContainer);
+    // console.log(`containers.length: #${containers.length}`);
+    const walls = getObjectsByPrototype(StructureWall).filter(c =>
+        c.id == "6"  ||
+        c.id == "11" ||
+        c.id == "21" ||
+        c.id == "26"
+    );
+
+    // for (const wall of walls) {
+    //   console.log(`Constructed wall id #${wall.id}`);
+    // }
+
+    this.runMiners(containers, this.personalSpawn);
+    this.runWallBreakers(walls, this.personalSpawn);
+    this.runMelees(enemies, this.enemySpawn);
     this.runHealers();
-    this.runRanged(enemySpawn);
+    this.runRanged(this.enemySpawn);
+
+    // // TODO: fix
+    // this.runAll(containers);
+  }
+
+  public spawnCreepByRole(role: string): boolean {
+    let newCreep = null;
+    let creepCreated = false;
+
+    if (this.personalSpawn === undefined) {
+      return false;
+    }
+
+    switch (role) {
+      case 'miner':
+        newCreep = this.personalSpawn.spawnCreep([MOVE, MOVE, MOVE, CARRY, CARRY]).object;
+        if (newCreep) {
+          this.miners.push(newCreep);
+          this.initializeCreep(newCreep, RoleSpawnAndSwamp.Miner);
+          console.log(`Spawned miner #${this.miners.length}`);
+          creepCreated = true;
+        }
+        break;
+
+      case 'wallbreaker':
+        newCreep = this.personalSpawn.spawnCreep([MOVE, ATTACK, ATTACK, ATTACK]).object;
+        if (newCreep) {
+          this.wallbreakers.push(newCreep);
+          this.initializeCreep(newCreep, RoleSpawnAndSwamp.Wallbreaker);
+          console.log(`Spawned wallbreaker #${this.wallbreakers.length}`);
+          creepCreated = true;
+        }
+        break;
+
+      case 'melee':
+        newCreep = this.personalSpawn.spawnCreep([TOUGH, MOVE, ATTACK, MOVE, ATTACK, MOVE, ATTACK]).object;
+        if (newCreep) {
+          this.melees.push(newCreep);
+          this.initializeCreep(newCreep, RoleSpawnAndSwamp.Melee);
+          console.log(`Spawned melee #${this.melees.length}`);
+          creepCreated = true;
+        }
+        break;
+
+      case 'healer':
+        newCreep = this.personalSpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, HEAL]).object;
+        if (newCreep) {
+          this.healers.push(newCreep);
+          this.initializeCreep(newCreep, RoleSpawnAndSwamp.Healer);
+          console.log(`Spawned healer #${this.healers.length}`);
+          creepCreated = true;
+        }
+        break;
+
+      case 'ranged':
+        newCreep = this.personalSpawn.spawnCreep([MOVE, RANGED_ATTACK, MOVE, RANGED_ATTACK]).object;
+        if (newCreep) {
+          this.ranged.push(newCreep);
+          this.initializeCreep(newCreep, RoleSpawnAndSwamp.Ranged);
+          console.log(`Spawned ranged #${this.ranged.length}`);
+          creepCreated = true;
+        }
+        break;
+    }
+
+    return creepCreated;
   }
 
   public runMiners(containers: StructureContainer[], spawn: StructureSpawn | undefined): void {
@@ -60,6 +176,8 @@ export class CreepManager {
       if (miner === null || miner.store === null || miner.store === undefined || miner.spawning) {
         return;
       }
+
+      // console.log(`Miner index #${index}`);
 
       // if (!miner.pathVisual) {
       //   miner.pathVisual = new Visual(10, true);
@@ -134,7 +252,7 @@ export class CreepManager {
         const wallbreakerRange = wallbreaker.getRangeTo(targetEnemy);
         if (wallbreakerRange > 1) {
           // Go to closest container and withdraw energy
-          wallbreaker.moveTo(targetEnemy);
+          wallbreaker.moveTo(targetEnemy, DefaultFindPathOptions);
 
           // // DEBUG PATH
           // const path = wallbreaker.findPathTo(targetEnemy);
@@ -154,7 +272,7 @@ export class CreepManager {
         const wallbreakerRange = wallbreaker.getRangeTo(targetWall);
 
         if (wallbreakerRange > 1) {
-          wallbreaker.moveTo(targetWall);
+          wallbreaker.moveTo(targetWall, DefaultFindPathOptions);
 
           // // DEBUG PATH
           // const path = wallbreaker.findPathTo(targetWall);
@@ -181,15 +299,25 @@ export class CreepManager {
         }
 
         if (melee.getRangeTo(target) > 1) {
-          melee.moveTo(target);
+          melee.moveTo(target, DefaultFindPathOptions);
         }
+
         melee.attack(target);
+
+        if (melee.getRangeTo(target) > 1) {
+          melee.moveTo(target, DefaultFindPathOptions);
+        }
       } else {
         // No enemies, attack enemy base
         if (melee.getRangeTo(enemySpawn) > 1) {
-          melee.moveTo(enemySpawn);
+          melee.moveTo(enemySpawn, DefaultFindPathOptions);
         }
+
         melee.attack(enemySpawn);
+
+        if (melee.getRangeTo(enemySpawn) > 1) {
+          melee.moveTo(enemySpawn, DefaultFindPathOptions);
+        }
       }
     });
   }
@@ -269,25 +397,37 @@ export class CreepManager {
 
         // Try to maintain optimal range (3 tiles)
         const range = ranged.getRangeTo(target);
+
         if (range > 3) {
-          ranged.moveTo(target);
+          ranged.moveTo(target, DefaultFindPathOptions);
         } else if (range < 3) {
           // Move away to maintain distance
           const flee = {
             x: ranged.x + (ranged.x - target.x),
             y: ranged.y + (ranged.y - target.y)
           };
-          ranged.moveTo(flee);
+          ranged.moveTo(flee, DefaultFindPathOptions);
         }
 
         ranged.rangedAttack(target);
+
+        if (range > 3) {
+          ranged.moveTo(target, DefaultFindPathOptions);
+        } else if (range < 3) {
+          // Move away to maintain distance
+          const flee = {
+            x: ranged.x + (ranged.x - target.x),
+            y: ranged.y + (ranged.y - target.y)
+          };
+          ranged.moveTo(flee, DefaultFindPathOptions);
+        }
       } else if (enemySpawn) {
         // No enemies, attack enemy base
         const range = ranged.getRangeTo(enemySpawn);
-        if (range > 3) {
-          ranged.moveTo(enemySpawn);
-        }
         ranged.rangedAttack(enemySpawn);
+        if (range > 3) {
+          ranged.moveTo(enemySpawn, DefaultFindPathOptions);
+        }
       }
     });
   }
@@ -306,9 +446,9 @@ export class CreepManager {
     return Array.from(this.jbCreeps.values());
   }
 
-  runAll(): void {
-    for (const jbCreep of this.jbCreeps.values()) {
-      jbCreep.performRole();
+  runAll(containers: StructureContainer[]): void {
+    for (let jbCreep of this.jbCreeps.values()) {
+      jbCreep.performRole(containers, this.personalSpawn);
     }
   }
 
