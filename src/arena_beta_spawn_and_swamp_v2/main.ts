@@ -22,7 +22,8 @@ import {
   Position,
   Resource,
   StructureExtension,
-  StructureWall
+  StructureWall,
+  StructureRampart
 } from "game/prototypes";
 import {
   getDirection,
@@ -66,13 +67,14 @@ let containers: StructureContainer[];
 let myExtensions: StructureExtension[];
 let constructionSites: ConstructionSite[];
 let walls: StructureWall[];
+let enemyRamparts: StructureRampart[];
 
 // Body templates for different roles
 const BODIES: Record<Role, BodyPartConstant[]> = {
   [Role.HARVESTER]: [WORK, WORK, MOVE],
   [Role.HAULER]: [CARRY, CARRY, MOVE, MOVE],
   [Role.BUILDER]: [WORK, CARRY, MOVE, MOVE],
-  [Role.MELEE]: [TOUGH, TOUGH, MOVE, ATTACK, MOVE, ATTACK, MOVE, ATTACK, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE],
+  [Role.MELEE]: [TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, MOVE],
   [Role.RANGED]: [MOVE, RANGED_ATTACK, MOVE, RANGED_ATTACK],
   [Role.HEALER]: [MOVE, MOVE, MOVE, MOVE, HEAL]
 };
@@ -138,6 +140,7 @@ function updateGameState(): void {
   myExtensions = getObjectsByPrototype(StructureExtension).filter(c => c.my);
   constructionSites = getObjectsByPrototype(ConstructionSite).filter(c => c.my && c.exists && c.progress < c.progressTotal);
   walls = getObjectsByPrototype(StructureWall);
+  enemyRamparts = getObjectsByPrototype(StructureRampart).filter(c => !c.my);
 }
 
 function displayVisuals(): void {
@@ -207,6 +210,20 @@ function assignRole(creep: Creep): void {
   }
 }
 
+// Add this helper function to calculate total available energy for spawning
+function getTotalSpawnEnergy(): number {
+  if (!mySpawn) return 0;
+
+  // Spawn's energy + all extensions' energy
+  let total = mySpawn.store.energy || 0;
+
+  myExtensions.forEach(ext => {
+    total += ext.store.energy || 0;
+  });
+
+  return total;
+}
+
 function handleSpawning(): void {
   if (!mySpawn || mySpawn.spawning) return;
 
@@ -218,6 +235,9 @@ function handleSpawning(): void {
   myCreeps.forEach(c => {
     if (c.role) roleCounts.set(c.role, (roleCounts.get(c.role) || 0) + 1);
   });
+
+  // Get total available energy (spawn + extensions)
+  const totalEnergy = getTotalSpawnEnergy();
 
   // Spawning priorities
   const spawnPriorities: Array<{ role: Role; max: number }> = [
@@ -243,12 +263,12 @@ function handleSpawning(): void {
       const body = BODIES[priority.role];
       const cost = body.reduce((sum, part) => sum + BODYPART_COST[part], 0);
 
-      if (mySpawn.store.energy >= cost) {
+      if (totalEnergy >= cost) {
         const result = mySpawn.spawnCreep(body);
         if (result.object) {
           result.object.role = priority.role;
           result.object.initialPos = { x: mySpawn.x, y: mySpawn.y };
-          console.log(`Spawning ${priority.role}`);
+          console.log(`Spawning ${priority.role} (Energy: ${totalEnergy}/${cost})`);
         }
         break;
       }
@@ -314,62 +334,35 @@ function runHauler(creep: Creep): void {
       moveWithinRange(creep, targetContainer, 1);
       creep.withdraw(targetContainer, 'energy');
     }
-
-    // if (droppedEnergy) {
-    //   moveWithinRange(creep, droppedEnergy, 1);
-    //   if (creep.pickup(droppedEnergy) === ERR_NOT_IN_RANGE) {
-    //     creep.moveTo(droppedEnergy);
-    //   }
-    // } else if (haulerFreeCapacity !== null && haulerFreeCapacity > 0 && targetContainer) {
-    //   moveWithinRange(creep, targetContainer, 1);
-    //   creep.withdraw(targetContainer, 'energy');
-    // }
   } else {
-    // Deliver energy
-    // Ideally should look for closest not full myExtension
-    // or closest mySpawn
+    // Deliver energy - Prioritize spawn, then extensions
     const haulerRange = creep.getRangeTo(mySpawn);
     const mySpawnStoreFreeCapacity = mySpawn.store.getFreeCapacity('energy');
 
     // Find the closest structure that needs energy
-    const closestSpawn = creep.findClosestByPath(getObjectsByPrototype(StructureSpawn).filter(s => s.my));
     const myNotFullExtensions = myExtensions
       .filter(extension => {
         const extensionStore = extension.store;
         const extensionStoreFreeCapacity = extensionStore.getFreeCapacity('energy');
-        return extensionStore !== null && extensionStore !== undefined;
+        return extensionStore !== null && extensionStore !== undefined && extensionStoreFreeCapacity !== null && extensionStoreFreeCapacity > 0;
       }
     );
     const myClosestExtension = creep.findClosestByPath(myNotFullExtensions);
-    const myExtensionFreeCapacity = myClosestExtension?.store.getFreeCapacity('energy');
-    // // DEBUG
+    // DEBUG
     // console.log(`myExtensions.length: ${myExtensions.length}`);
     // console.log(`myNotFullExtensions.length: ${myNotFullExtensions.length}`);
     // console.log(`myExtensionFreeCapacity: ${myExtensionFreeCapacity}`);
     // console.log(`mySpawnStoreFreeCapacity: ${mySpawnStoreFreeCapacity}`);
 
-    const rangeToSpawn = creep.getRangeTo(mySpawn);
-    const rangeToMyExtension = creep.getRangeTo(mySpawn);
-
-    if (mySpawnStoreFreeCapacity !== null && mySpawnStoreFreeCapacity > 0 && rangeToSpawn < rangeToMyExtension) {
-      if (rangeToSpawn > 1) {
-        // Go to closest container and withdraw energy
-        creep.moveTo(mySpawn);
-      }
-      creep.transfer(mySpawn, 'energy');
-    } else if (myExtensionFreeCapacity !== null && myExtensionFreeCapacity !== undefined && myExtensionFreeCapacity > 0 && myClosestExtension !== null && rangeToSpawn > rangeToMyExtension) {
-      const haulerRange = creep.getRangeTo(myClosestExtension);
-      if (haulerRange > 1) {
-        // Go to closest container and withdraw energy
-        creep.moveTo(myClosestExtension);
-      }
+    if (myClosestExtension !== null) {
+      moveWithinRange(creep, myClosestExtension, 1);
       creep.transfer(myClosestExtension, 'energy');
     } else {
-      if (rangeToSpawn > 1) {
-        // Go to closest container and withdraw energy
-        creep.moveTo(mySpawn);
+      const mySpawnFreeCapacity = mySpawn.store.getFreeCapacity('energy');
+      if (mySpawnFreeCapacity !== null && mySpawnFreeCapacity !== undefined && mySpawnFreeCapacity > 0){
+        moveWithinRange(creep, mySpawn, 1);
+        creep.transfer(mySpawn, 'energy');
       }
-      creep.transfer(mySpawn, 'energy');
     }
   }
 }
@@ -388,7 +381,8 @@ function runBuilder(creep: Creep): void {
       .sort((a, b) => getRange(a, creep) - getRange(b, creep)).find(c => c.my);
 
     if (site !== undefined) {
-      console.log(`Builder ${creep.id} building ${site.id}`);
+      // // DEBUG
+      // console.log(`Builder ${creep.id} building ${site.id}`);
       const buildRes = creep.build(site);
       if (buildRes !== OK) {
         creep.moveTo(site);
@@ -422,15 +416,20 @@ function runBuilder(creep: Creep): void {
 }
 
 function runMeleeAttacker(creep: Creep): void {
+  if (creep === null || creep === undefined) return;
+
   const target = enemyCreeps
-    .sort((a, b) => getRange(a, creep) - getRange(b, creep))[0];
+    .sort((a, b) => getRange(a, creep) - getRange(b, creep)).find(e => e);
 
   const nearestWall = creep.findClosestByPath(walls);
-  const wallRange = creep.getRangeTo(target);
+  const nearestEnemyRampart = creep.findClosestByPath(enemyRamparts);
 
-  if (target && creep.getRangeTo(target) < 5) {
+  if (target !== null && target !== undefined && creep.getRangeTo(target) < 5) {
     moveWithinRange(creep, target, 1);
     creep.attack(target);
+  } else if (nearestEnemyRampart && creep.getRangeTo(nearestEnemyRampart) < 5) {
+    moveWithinRange(creep, nearestEnemyRampart, 1);
+    creep.attack(nearestEnemyRampart);
   } else if (creep.getRangeTo(enemySpawn) < 5) {
     moveWithinRange(creep, enemySpawn, 1);
     creep.attack(enemySpawn);
@@ -441,7 +440,7 @@ function runMeleeAttacker(creep: Creep): void {
     // Return to initial position if no targets
     moveWithinRange(creep, creep.initialPos, 3);
   } else {
-     moveWithinRange(creep, enemySpawn, 1);
+    moveWithinRange(creep, enemySpawn, 1);
     creep.attack(enemySpawn);
   }
 }
@@ -592,7 +591,7 @@ function planConstructionSites(): void {
   }
 
   // for (let site of constructionSites) {
-  //   const containerNearSite = containers.find(c => getRange(c, site) <= 1);
+  //   const containerNearSite = containers.filter(c => c.x > 13 && c.x < 86).find(c => getRange(c, site) <= 1);
   //   if (!containerNearSite) {
   //     site.remove();
   //   }
