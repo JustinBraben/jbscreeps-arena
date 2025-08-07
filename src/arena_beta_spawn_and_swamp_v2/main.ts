@@ -73,8 +73,8 @@ let enemyRamparts: StructureRampart[];
 const BODIES: Record<Role, BodyPartConstant[]> = {
   [Role.HARVESTER]: [WORK, WORK, MOVE],
   [Role.HAULER]: [CARRY, CARRY, MOVE, MOVE],
-  [Role.BUILDER]: [WORK, CARRY, MOVE, MOVE],
-  [Role.MELEE]: [TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, MOVE],
+  [Role.BUILDER]: [WORK, CARRY, MOVE, WORK, CARRY, MOVE, WORK, CARRY, MOVE,],
+  [Role.MELEE]: [TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK],
   [Role.RANGED]: [MOVE, RANGED_ATTACK, MOVE, RANGED_ATTACK],
   [Role.HEALER]: [MOVE, MOVE, MOVE, MOVE, HEAL]
 };
@@ -424,7 +424,7 @@ function runMeleeAttacker(creep: Creep): void {
   const nearestWall = creep.findClosestByPath(walls);
   const nearestEnemyRampart = creep.findClosestByPath(enemyRamparts);
 
-  if (target !== null && target !== undefined && creep.getRangeTo(target) < 5) {
+  if (target !== null && target !== undefined && creep.getRangeTo(target) < 10) {
     moveWithinRange(creep, target, 1);
     creep.attack(target);
   } else if (nearestEnemyRampart && creep.getRangeTo(nearestEnemyRampart) < 5) {
