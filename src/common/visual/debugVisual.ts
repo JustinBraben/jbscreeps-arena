@@ -63,18 +63,43 @@ export function debugTileCost(
   boundsTopLeft: Position,
   boundsBottomRightY: Position,
 ): void {
-  let xArr: Array<number> = new Array<number>();
+  // let xArr: Array<number> = new Array<number>();
+  // for (let x = boundsTopLeft.x; x < boundsBottomRightY.x; x += 1) {
+  //   xArr.push(x);
+  // }
+
+  // let yArr: Array<number> = new Array<number>();
+  // for (let y = boundsTopLeft.y; y < boundsBottomRightY.y; y += 1) {
+  //   yArr.push(y);
+  // }
+
+  // for (let x of xArr) {
+  //   for (let y of yArr) {
+  //     const tileTerrain = getTerrainAt({ x: x, y: y });
+  //     if (tileTerrain === TERRAIN_WALL) continue;
+
+  //     if (tileTerrain === TERRAIN_PLAIN) {
+  //       gameVisual.text(
+  //         "0",
+  //         { x: x, y: y },
+  //         {
+  //           font: 0.5
+  //         }
+  //       );
+  //     } else {
+  //       gameVisual.text(
+  //         "2",
+  //         { x: x, y: y },
+  //         {
+  //           font: 0.5
+  //         }
+  //       );
+  //     }
+  //   }
+  // }
+
   for (let x = boundsTopLeft.x; x < boundsBottomRightY.x; x += 1) {
-    xArr.push(x);
-  }
-
-  let yArr: Array<number> = new Array<number>();
-  for (let y = boundsTopLeft.y; y < boundsBottomRightY.y; y += 1) {
-    yArr.push(y);
-  }
-
-  for (let x of xArr) {
-    for (let y of yArr) {
+    for (let y = boundsTopLeft.y; y < boundsBottomRightY.y; y += 1) {
       const tileTerrain = getTerrainAt({ x: x, y: y });
       if (tileTerrain === TERRAIN_WALL) continue;
 

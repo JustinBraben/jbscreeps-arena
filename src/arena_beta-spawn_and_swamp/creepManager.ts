@@ -113,7 +113,7 @@ export class CreepManager {
 
     switch (role) {
       case 'miner':
-        newCreep = this.personalSpawn.spawnCreep([MOVE, MOVE, MOVE, CARRY, CARRY]).object;
+        newCreep = this.personalSpawn.spawnCreep([MOVE, MOVE, CARRY, CARRY]).object;
         if (newCreep) {
           this.miners.push(newCreep);
           this.initializeCreep(newCreep, RoleSpawnAndSwamp.Miner);
@@ -133,7 +133,7 @@ export class CreepManager {
         break;
 
       case 'melee':
-        newCreep = this.personalSpawn.spawnCreep([TOUGH, MOVE, ATTACK, MOVE, ATTACK, MOVE, ATTACK]).object;
+        newCreep = this.personalSpawn.spawnCreep([TOUGH, TOUGH, MOVE, ATTACK, MOVE, ATTACK, MOVE, ATTACK, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE]).object;
         if (newCreep) {
           this.melees.push(newCreep);
           this.initializeCreep(newCreep, RoleSpawnAndSwamp.Melee);

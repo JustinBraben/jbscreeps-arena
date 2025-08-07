@@ -29,15 +29,15 @@
 
 // This stuff is arena-specific
 import { ATTACK, HEAL, RANGED_ATTACK } from "game/constants";
-import { Creep, GameObject } from "game/prototypes";
+import { Creep, GameObject, Position } from "game/prototypes";
 import { getDirection, getObjectsByPrototype, getRange, getTicks } from "game/utils";
-import { Flag } from "arena";
+import { Flag } from 'arena/season_beta/capture_the_flag/basic/prototypes';
 import { Visual } from "game/visual";
 import { searchPath } from "game/path-finder";
 
 declare module "game/prototypes" {
   interface Creep {
-    initialPos: RoomPosition;
+    initialPos: Position;
   }
 }
 

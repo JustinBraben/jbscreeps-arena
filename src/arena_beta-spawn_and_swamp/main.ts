@@ -57,5 +57,6 @@ function resetBuildQueue(): void {
   // buildQueue = ['miner', 'miner', 'miner', 'melee', 'healer', 'ranged'];
   // buildQueue = ['miner', 'miner', 'wallbreaker', 'wallbreaker', 'melee', 'healer', 'ranged']
   // buildQueue.push('miner', 'ranged', 'healer', 'ranged', 'ranged', 'wallbreaker', 'healer', 'ranged');
+  // buildQueue.push('miner', 'miner', 'wallbreaker', 'ranged', 'ranged', 'healer', 'melee', 'melee');
   buildQueue.push('miner', 'miner', 'wallbreaker', 'melee', 'melee', 'melee', 'healer', 'ranged');
 }
