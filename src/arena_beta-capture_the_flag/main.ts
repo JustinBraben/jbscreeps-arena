@@ -95,10 +95,15 @@ function meleeAttacker(creep: Creep) {
       backgroundPadding: 0.03
     }
   );
+  // Filter to get enemy creeps within 10 range of melee spawn
+  // Sort them by closest to furthest range from melee attacker
+  // helps defend spawn
   const targets = enemyCreeps
     .filter(i => getRange(i, creep.initialPos) < 10)
     .sort((a, b) => getRange(a, creep) - getRange(b, creep));
 
+  // melee attackers fight enemies near spawn
+  // otherwise they move closer to their original defense position
   if (targets.length > 0) {
     creep.moveTo(targets[0]);
     creep.attack(targets[0]);
