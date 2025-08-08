@@ -54,6 +54,8 @@ declare module "game/prototypes" {
     role: Role;
     targetId: string;
     working: boolean;
+    buildingSwampExtensions?: boolean;  // New flag for swamp building mode
+    swampContainerId?: string;          // Track which container we're working with
   }
 }
 
@@ -68,15 +70,27 @@ let myExtensions: StructureExtension[];
 let constructionSites: ConstructionSite[];
 let walls: StructureWall[];
 let enemyRamparts: StructureRampart[];
+let globalVisual: Visual = new Visual(10, true);
 
 // Body templates for different roles
 const BODIES: Record<Role, BodyPartConstant[]> = {
   [Role.HARVESTER]: [WORK, WORK, MOVE],
-  [Role.HAULER]: [CARRY, CARRY, MOVE, MOVE],
-  [Role.BUILDER]: [WORK, CARRY, MOVE, WORK, CARRY, MOVE, WORK, CARRY, MOVE,],
-  [Role.MELEE]: [TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK],
-  [Role.RANGED]: [MOVE, RANGED_ATTACK, MOVE, RANGED_ATTACK],
-  [Role.HEALER]: [MOVE, MOVE, MOVE, MOVE, HEAL]
+  [Role.HAULER]: [CARRY, CARRY, MOVE],
+  [Role.BUILDER]: [
+    WORK, CARRY, MOVE,     // 200 energy
+    WORK, CARRY, MOVE,     // 200 energy
+    WORK, CARRY, MOVE,     // 200 energy
+    MOVE, CARRY, MOVE      // 200 energy
+  ],  // Total: 800 energy cost, 200 carry capacity
+  // [Role.MELEE]: [TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK],
+  // [Role.MELEE]: [TOUGH, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, MOVE,],
+  [Role.MELEE]: [TOUGH, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, MOVE, MOVE],
+  [Role.RANGED]: [
+    TOUGH, MOVE, MOVE,
+    MOVE, MOVE, MOVE,     // 150 energy
+    RANGED_ATTACK, MOVE
+  ],
+  [Role.HEALER]: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, HEAL]
 };
 
 // Main game loop
@@ -124,6 +138,7 @@ export function loop(): void {
   }
 }
 
+// All things we want to get every tick should be saved here
 function updateGameState(): void {
   let personalSpawn = getObjectsByPrototype(StructureSpawn).find(s => s.my);
   if (personalSpawn !== undefined) {
@@ -141,14 +156,16 @@ function updateGameState(): void {
   constructionSites = getObjectsByPrototype(ConstructionSite).filter(c => c.my && c.exists && c.progress < c.progressTotal);
   walls = getObjectsByPrototype(StructureWall);
   enemyRamparts = getObjectsByPrototype(StructureRampart).filter(c => !c.my);
+
+  globalVisual.clear();
 }
 
+// Use the globalVisual to display
+// Avoids needless new Visual() every frame
 function displayVisuals(): void {
-  const visual = new Visual();
-
   // Display creep roles and health
   myCreeps.forEach(creep => {
-    visual.text(
+    globalVisual.text(
       `${creep.role?.substring(0, 3).toUpperCase()} ${creep.hits}/${creep.hitsMax}`,
       { x: creep.x, y: creep.y - 0.5 },
       {
@@ -160,10 +177,11 @@ function displayVisuals(): void {
     );
   });
 
-  // Display spawn energy
+  // Display spawn energy AND total energy
   if (mySpawn) {
-    visual.text(
-      `Energy: ${mySpawn.store.energy}`,
+    const totalEnergy = getTotalSpawnEnergy();
+    globalVisual.text(
+      `Energy: ${mySpawn.store.energy}/${totalEnergy}`,
       { x: mySpawn.x, y: mySpawn.y - 1 },
       {
         font: "0.5",
@@ -173,7 +191,7 @@ function displayVisuals(): void {
       }
     );
 
-    debugExtensionPlaceholders(visual, containers, mySpawn);
+    debugExtensionPlaceholders(globalVisual, containers, mySpawn);
   }
 }
 
@@ -242,19 +260,21 @@ function handleSpawning(): void {
   // Spawning priorities
   const spawnPriorities: Array<{ role: Role; max: number }> = [
     // { role: Role.HARVESTER, max: Math.min(sources.length, 2) },
-    { role: Role.HAULER, max: 2 },
+    { role: Role.HAULER, max: 1 },
     { role: Role.BUILDER, max: 1 },
     { role: Role.MELEE, max: 5 },
-    { role: Role.HAULER, max: 4 },
-    { role: Role.BUILDER, max: 2 },
-    { role: Role.MELEE, max: 10 },
-    { role: Role.RANGED, max: 2 },
-    { role: Role.HEALER, max: 2 },
-    { role: Role.HAULER, max: 6 },
-    { role: Role.BUILDER, max: 4 },
-    { role: Role.MELEE, max: 15 },
     { role: Role.RANGED, max: 5 },
     { role: Role.HEALER, max: 5 },
+    { role: Role.HAULER, max: 3 },
+    { role: Role.BUILDER, max: 2 },
+    { role: Role.RANGED, max: 20 },
+    { role: Role.HEALER, max: 20 },
+    { role: Role.MELEE, max: 10 },
+    { role: Role.HAULER, max: 6 },
+    { role: Role.BUILDER, max: 4 },
+    { role: Role.RANGED, max: 30 },
+    { role: Role.HEALER, max: 30 },
+    { role: Role.MELEE, max: 30 },
   ];
 
   for (const priority of spawnPriorities) {
@@ -276,6 +296,8 @@ function handleSpawning(): void {
   }
 }
 
+// TODO: Remove, not used
+// Must refactor to get rid of harvester role, only need hauler
 function runHarvester(creep: Creep): void {
   // Find closest source without a harvester or the one assigned
   if (!creep.targetId || !sources.find(s => s.id === creep.targetId)) {
@@ -332,10 +354,14 @@ function runHauler(creep: Creep): void {
 
     if (haulerFreeCapacity !== null && haulerFreeCapacity > 0 && targetContainer) {
       moveWithinRange(creep, targetContainer, 1);
-      creep.withdraw(targetContainer, 'energy');
+      if (creep.getRangeTo(targetContainer) < 2) creep.withdraw(targetContainer, 'energy');
     }
   } else {
-    // Deliver energy - Prioritize spawn, then extensions
+    // Deliver energy - Prioritize closest extension with free capacity
+    // otherwise attempt to deliver to spawn
+    // At the start of the game the spawn fills up quickly, then once starting
+    // containers are depleted haulers shouldn't be transferring energy to the spawn anymore ideally
+    // as the spawning containers and my extensions will be in the middle swamp area
     const haulerRange = creep.getRangeTo(mySpawn);
     const mySpawnStoreFreeCapacity = mySpawn.store.getFreeCapacity('energy');
 
@@ -356,63 +382,219 @@ function runHauler(creep: Creep): void {
 
     if (myClosestExtension !== null) {
       moveWithinRange(creep, myClosestExtension, 1);
-      creep.transfer(myClosestExtension, 'energy');
+      if (creep.getRangeTo(myClosestExtension) < 2) creep.transfer(myClosestExtension, 'energy');
     } else {
       const mySpawnFreeCapacity = mySpawn.store.getFreeCapacity('energy');
       if (mySpawnFreeCapacity !== null && mySpawnFreeCapacity !== undefined && mySpawnFreeCapacity > 0){
         moveWithinRange(creep, mySpawn, 1);
-        creep.transfer(mySpawn, 'energy');
+        if (creep.getRangeTo(mySpawn) < 2) creep.transfer(mySpawn, 'energy');
       }
     }
   }
 }
 
 function runBuilder(creep: Creep): void {
+  // Check if we're in swamp extension building mode
+  if (creep.buildingSwampExtensions) {
+    runSwampExtensionBuilder(creep);
+    return;
+  }
+
+  // Check if initial extensions near spawn are built
+  const initialExtensionsBuilt = checkInitialExtensionsBuilt();
+
+  // If initial extensions are done and we have no energy, look for swamp containers
+  if (initialExtensionsBuilt && creep.store.energy === 0) {
+    const swampContainer = findSwampContainerWithEnergy(creep);
+    if (swampContainer && !hasNearbyExtensions(swampContainer)) {
+      // Switch to swamp building mode
+      creep.buildingSwampExtensions = true;
+      creep.swampContainerId = swampContainer.id;
+      creep.working = false;
+      runSwampExtensionBuilder(creep);
+      return;
+    }
+  }
+
   // Toggle working state
   if (creep.working && creep.store.energy === 0) {
     creep.working = false;
   } else if (!creep.working && creep.store.getFreeCapacity() === 0) {
+    // Not considered working but full of energy, should set working
+    // to start constructing
     creep.working = true;
   }
 
   if (creep.working) {
     // Build construction sites
+    // TODO: Prioritize construction sites with more progress towards building
     const site = constructionSites
-      .sort((a, b) => getRange(a, creep) - getRange(b, creep)).find(c => c.my);
+      .sort((a, b) => {
+        // Prioritize sites near spawn
+        const aDist = mySpawn ? getRange(a, mySpawn) : 100;
+        const bDist = mySpawn ? getRange(b, mySpawn) : 100;
+
+        // If both are close to spawn, prioritize by progress
+        if (aDist < 10 && bDist < 10) {
+          return (b.progress / b.progressTotal) - (a.progress / a.progressTotal);
+        }
+
+        // Otherwise prioritize by distance to spawn, then to creep
+        if (aDist !== bDist) return aDist - bDist;
+        return getRange(a, creep) - getRange(b, creep);
+      })
+      .find(c => c.my);
 
     if (site !== undefined) {
       // // DEBUG
       // console.log(`Builder ${creep.id} building ${site.id}`);
-      const buildRes = creep.build(site);
-      if (buildRes !== OK) {
-        creep.moveTo(site);
-      }
+      moveWithinRange(creep, site, 3);
+      if (creep.getRangeTo(site) < 4) creep.build(site);
     } else {
       // No construction sites, help with energy collection
       runHauler(creep);
     }
   } else {
-    runHauler(creep);
-    // // Get energy from spawn or haulers
-    // if (mySpawn && mySpawn.store.energy >= 50) {
-    //   if (creep.withdraw(mySpawn, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-    //     creep.moveTo(mySpawn);
-    //   }
-    // } else {
-    //   // Pick up dropped energy
-    //   const droppedEnergy = getObjectsByPrototype(Resource)
-    //     .sort((a, b) => getRange(a, creep) - getRange(b, creep)).find(e => e);
-
-    //   if (droppedEnergy) {
-    //     if (creep.pickup(droppedEnergy) === ERR_NOT_IN_RANGE) {
-    //       creep.moveTo(droppedEnergy);
-    //     }
-    //   } else {
-    //     // No droppedEnergy, help with energy collection
-    //     runHauler(creep);
-    //   }
-    // }
+    // Should harvest energy when not working
+    // not working means it was working and ran out of energy to build
+    // Get energy - prioritize spawn/extensions for initial building
+    if (!initialExtensionsBuilt) {
+      getEnergyFromSpawnOrExtensions(creep);
+    } else {
+      runHauler(creep);
+    }
   }
+}
+
+// New function to handle swamp extension building
+function runSwampExtensionBuilder(creep: Creep): void {
+  const targetContainer = containers.find(c => c.id === creep.swampContainerId);
+
+  if (!targetContainer) {
+    // Container no longer exists, exit this mode
+    creep.buildingSwampExtensions = false;
+    creep.swampContainerId = undefined;
+    return;
+  }
+
+  // Calculate energy needed for 3 extensions (3 * 50 = 150)
+  const energyNeededForExtensions = 150;
+
+  // Phase 1: Gather energy from container
+  if (creep.store.energy < energyNeededForExtensions) {
+    if (getRange(creep, targetContainer) > 1) {
+      creep.moveTo(targetContainer);
+    } else {
+      // Withdraw enough energy for 3 extensions
+      const withdrawAmount = Math.min(
+        energyNeededForExtensions - creep.store.energy,
+        targetContainer.store.energy,
+        creep.store.getFreeCapacity()!
+      );
+      creep.withdraw(targetContainer, RESOURCE_ENERGY, withdrawAmount);
+    }
+    return;
+  }
+
+  // Phase 2: Build extensions near this container
+  const nearbyConstructionSites = constructionSites.filter(site =>
+    getRange(site, targetContainer) <= 2
+  );
+
+  if (nearbyConstructionSites.length > 0) {
+    // Build the closest construction site
+    const site = nearbyConstructionSites[0];
+    if (creep.build(site) === ERR_NOT_IN_RANGE) {
+      creep.moveTo(site);
+    }
+
+    // If we run out of energy, go back to gathering
+    if (creep.store.energy === 0) {
+      // Check if there's still energy in the container
+      if (targetContainer.store.energy < 50) {
+        // Container is depleted, exit swamp building mode
+        creep.buildingSwampExtensions = false;
+        creep.swampContainerId = undefined;
+      }
+    }
+  } else {
+    // No more construction sites near this container, exit mode
+    creep.buildingSwampExtensions = false;
+    creep.swampContainerId = undefined;
+  }
+}
+
+// Helper function to check if initial extensions are built
+function checkInitialExtensionsBuilt(): boolean {
+  if (!mySpawn) return false;
+
+  // Check if the 2 initial extension sites near spawn are built
+  const initialSites = constructionSites.filter(site =>
+    getRange(site, mySpawn) <= 3
+  );
+
+  // Also check if extensions exist at those positions
+  const extensionsNearSpawn = myExtensions.filter(ext =>
+    getRange(ext, mySpawn) <= 3
+  );
+
+  // If we have at least 2 extensions near spawn and no construction sites, initial build is done
+  return extensionsNearSpawn.length >= 2 && initialSites.length === 0;
+}
+
+// Helper function to find a swamp container with energy
+function findSwampContainerWithEnergy(creep: Creep): StructureContainer | null {
+  // Containers in swamp area (13 < x < 86) with enough energy
+  const swampContainers = containers.filter(c =>
+    c.x > 13 && c.x < 86 &&
+    c.store.energy >= 150  // Enough for 3 extensions
+  );
+
+  if (swampContainers.length === 0) return null;
+
+  // Find closest one that doesn't already have extensions being built
+  return creep.findClosestByPath(swampContainers.filter(c =>
+    !hasNearbyExtensions(c) && !hasNearbyConstructionSites(c)
+  ));
+}
+
+// Helper function to check if a container already has nearby extensions
+function hasNearbyExtensions(container: StructureContainer): boolean {
+  return myExtensions.some(ext => getRange(ext, container) <= 2);
+}
+
+// Helper function to check if a container has nearby construction sites
+function hasNearbyConstructionSites(container: StructureContainer): boolean {
+  // Check if there are already 3 construction sites near this container
+  const nearbySites = constructionSites.filter(site =>
+    getRange(site, container) <= 2
+  );
+  return nearbySites.length >= 3;
+}
+
+// Helper function to get energy from spawn or extensions
+function getEnergyFromSpawnOrExtensions(creep: Creep): void {
+  if (!mySpawn) return;
+
+  // Try spawn first
+  if (mySpawn.store.energy >= 50) {
+    if (creep.withdraw(mySpawn, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+      creep.moveTo(mySpawn);
+    }
+    return;
+  }
+
+  // Try extensions with energy
+  const extensionWithEnergy = myExtensions.find(ext => ext.store.energy >= 25);
+  if (extensionWithEnergy) {
+    if (creep.withdraw(extensionWithEnergy, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+      creep.moveTo(extensionWithEnergy);
+    }
+    return;
+  }
+
+  // Fall back to hauler behavior
+  runHauler(creep);
 }
 
 function runMeleeAttacker(creep: Creep): void {
@@ -426,22 +608,22 @@ function runMeleeAttacker(creep: Creep): void {
 
   if (target !== null && target !== undefined && creep.getRangeTo(target) < 10) {
     moveWithinRange(creep, target, 1);
-    creep.attack(target);
+    if (creep.getRangeTo(target) < 2) creep.attack(target);
   } else if (nearestEnemyRampart && creep.getRangeTo(nearestEnemyRampart) < 5) {
     moveWithinRange(creep, nearestEnemyRampart, 1);
-    creep.attack(nearestEnemyRampart);
+    if (creep.getRangeTo(nearestEnemyRampart) < 2) creep.attack(nearestEnemyRampart);
   } else if (creep.getRangeTo(enemySpawn) < 5) {
     moveWithinRange(creep, enemySpawn, 1);
-    creep.attack(enemySpawn);
+    if (creep.getRangeTo(enemySpawn) < 2) creep.attack(enemySpawn);
   } else if (nearestWall) {
     moveWithinRange(creep, nearestWall, 1);
-    creep.attack(nearestWall);
+    if (creep.getRangeTo(nearestWall) < 2) creep.attack(nearestWall);
   } else if (creep.initialPos) {
     // Return to initial position if no targets
     moveWithinRange(creep, creep.initialPos, 3);
   } else {
     moveWithinRange(creep, enemySpawn, 1);
-    creep.attack(enemySpawn);
+    if (creep.getRangeTo(enemySpawn) < 2) creep.attack(enemySpawn);
   }
 }
 
@@ -536,6 +718,8 @@ function moveWithinRange(creep: Creep, otherPos: Position, idealRange: number): 
   }
 }
 
+// First few construction sites are hardcoded
+// Then it looks at containers in the swamp area to build construction sites next for quicker mining
 function planConstructionSites(): void {
   if (mySpawn === null || mySpawn === undefined) return;
 
@@ -590,6 +774,8 @@ function planConstructionSites(): void {
     }
   }
 
+  // // TODO: Remove construction site if
+  // // no resource container is beside it anymore
   // for (let site of constructionSites) {
   //   const containerNearSite = containers.filter(c => c.x > 13 && c.x < 86).find(c => getRange(c, site) <= 1);
   //   if (!containerNearSite) {
