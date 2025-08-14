@@ -4,6 +4,7 @@ import { StructureSpawn, StructureContainer, Creep, StructureWall, Id, Position,
 import { Visual } from 'game/visual';
 import { CreepManager } from './creepManager';
 import { debugContainerPathsToSpawn, debugExtensionPlaceholders, debugTileCost } from 'common/visual/debugVisual';
+import { DefaultFindPathOptions } from "common/constants";
 
 let creepManager = new CreepManager();
 
