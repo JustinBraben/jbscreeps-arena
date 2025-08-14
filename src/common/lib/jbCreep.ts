@@ -1,6 +1,6 @@
 // common/lib/jbCreep.ts
 import { Creep, Position, Structure, Source, StructureContainer, StructureSpawn } from 'game/prototypes';
-import { Role, RoleSpawnAndSwamp } from 'common/enums/role';
+import { Role } from 'common/enums/role';
 import { Core } from 'common/core';
 import { DirectionConstant, ResourceConstant, CreepMoveResult, ERR_INVALID_ARGS } from 'game/constants'
 import { FindPathOptions } from 'game/path-finder';
@@ -83,19 +83,19 @@ export class JBCreep {
     spawn: StructureSpawn | undefined
   ): void {
     switch (this.role) {
-      case RoleSpawnAndSwamp.Miner:
+      case Role.HAULER:
         this.performMinerRole(containers, spawn);
         break;
-      case RoleSpawnAndSwamp.Wallbreaker:
-        this.performWallbreakerRole();
-        break;
-      case RoleSpawnAndSwamp.Melee:
+      // case RoleSpawnAndSwamp.Wallbreaker:
+      //   this.performWallbreakerRole();
+      //   break;
+      case Role.MELEE:
         this.performMeleeRole();
         break;
-      case RoleSpawnAndSwamp.Healer:
+      case Role.HEALER:
         this.performHealerRole();
         break;
-      case RoleSpawnAndSwamp.Ranged:
+      case Role.RANGED:
         this.performRangedRole();
         break;
     }

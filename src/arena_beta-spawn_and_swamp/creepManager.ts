@@ -2,7 +2,7 @@ import { getObjectsByPrototype, getObjectById, getObjects } from 'game/utils';
 import { ATTACK, MOVE, CARRY, RANGED_ATTACK, HEAL, TOUGH, WORK } from 'game/constants';
 import { StructureSpawn, StructureContainer, Creep, StructureWall, Id, Position } from 'game/prototypes';
 import { JBCreep } from 'common/lib/jbCreep';
-import { Role, RoleSpawnAndSwamp } from 'common/enums/role';
+import { Role } from 'common/enums/role';
 import { DefaultFindPathOptions, DefaultFleeFindPathOptions } from 'common/constants';
 
 /**
@@ -116,7 +116,7 @@ export class CreepManager {
         newCreep = this.personalSpawn.spawnCreep([MOVE, MOVE, CARRY, CARRY]).object;
         if (newCreep) {
           this.miners.push(newCreep);
-          this.initializeCreep(newCreep, RoleSpawnAndSwamp.Miner);
+          this.initializeCreep(newCreep, Role.HAULER);
           console.log(`Spawned miner #${this.miners.length}`);
           creepCreated = true;
         }
@@ -126,7 +126,7 @@ export class CreepManager {
         newCreep = this.personalSpawn.spawnCreep([MOVE, ATTACK, ATTACK, ATTACK]).object;
         if (newCreep) {
           this.wallbreakers.push(newCreep);
-          this.initializeCreep(newCreep, RoleSpawnAndSwamp.Wallbreaker);
+          this.initializeCreep(newCreep, Role.MELEE);
           console.log(`Spawned wallbreaker #${this.wallbreakers.length}`);
           creepCreated = true;
         }
@@ -136,7 +136,7 @@ export class CreepManager {
         newCreep = this.personalSpawn.spawnCreep([TOUGH, TOUGH, MOVE, ATTACK, MOVE, ATTACK, MOVE, ATTACK, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE]).object;
         if (newCreep) {
           this.melees.push(newCreep);
-          this.initializeCreep(newCreep, RoleSpawnAndSwamp.Melee);
+          this.initializeCreep(newCreep, Role.MELEE);
           console.log(`Spawned melee #${this.melees.length}`);
           creepCreated = true;
         }
@@ -146,7 +146,7 @@ export class CreepManager {
         newCreep = this.personalSpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, HEAL]).object;
         if (newCreep) {
           this.healers.push(newCreep);
-          this.initializeCreep(newCreep, RoleSpawnAndSwamp.Healer);
+          this.initializeCreep(newCreep, Role.HEALER);
           console.log(`Spawned healer #${this.healers.length}`);
           creepCreated = true;
         }
@@ -156,7 +156,7 @@ export class CreepManager {
         newCreep = this.personalSpawn.spawnCreep([MOVE, RANGED_ATTACK, MOVE, RANGED_ATTACK]).object;
         if (newCreep) {
           this.ranged.push(newCreep);
-          this.initializeCreep(newCreep, RoleSpawnAndSwamp.Ranged);
+          this.initializeCreep(newCreep, Role.RANGED);
           console.log(`Spawned ranged #${this.ranged.length}`);
           creepCreated = true;
         }

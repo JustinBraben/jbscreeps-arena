@@ -1,10 +1,10 @@
 // Spawn and Swamp roles
-export enum RoleSpawnAndSwamp {
-  Miner,
-  Wallbreaker,
-  Melee,
-  Healer,
-  Ranged
+export enum Role {
+  BUILDER = "\u2692",
+  MELEE = "\u270A",
+  RANGED = "\u2197",
+  HEALER = "\u26D1",
+  HAULER = "\u26CF"
 }
 
-export type Role = RoleSpawnAndSwamp;
+// export type Role = RoleSpawnAndSwamp;

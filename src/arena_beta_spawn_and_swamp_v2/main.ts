@@ -10,7 +10,10 @@ import {
   ERR_NOT_IN_RANGE,
   OK,
   BODYPART_COST,
-  BodyPartConstant
+  BodyPartConstant,
+  TERRAIN_WALL,
+  ERR_INVALID_ARGS,
+  ERR_INVALID_TARGET
 } from "game/constants";
 import {
   Creep,
@@ -31,28 +34,21 @@ import {
   getRange,
   getTicks,
   createConstructionSite,
+  getTerrainAt,
   findPath
 } from "game/utils";
 import { searchPath } from "game/path-finder";
 import { Visual } from "game/visual";
+import { Role } from 'common/enums/role';
 import { debugExtensionPlaceholders } from "common/visual/debugVisual";
 import { DefaultFindPathOptions, DefaultFleeFindPathOptions } from "common/constants";
-
-// Define Role enum for better organization
-enum Role {
-  BUILDER = "\u2692",
-  MELEE = "\u270A",
-  RANGED = "\u2197",
-  HEALER = "\u26D1",
-  HAULER = "\u26CF"
-}
 
 // Extend the Creep interface with our custom properties
 declare module "game/prototypes" {
   interface Creep {
     initialPos: Position;
     role: Role;
-    targetId: Id<StructureContainer>;
+    targetId: Id<StructureContainer> | undefined;
     working: boolean;
     buildingSwampExtensions?: boolean;  // New flag for swamp building mode
     swampContainerId?: string;          // Track which container we're working with
@@ -195,7 +191,7 @@ function displayVisuals(): void {
   debugExtensionPlaceholders(globalVisual, containers, mySpawn);
 }
 
-function getRoleColor(role?: Role): string {
+function getRoleColor(role: Role): string {
   switch (role) {
     case Role.HAULER: return "#FFA500";
     case Role.BUILDER: return "#8B4513";
@@ -401,7 +397,7 @@ function runBuilder(creep: Creep): void {
   // Toggle working state based on energy
   if (creep.working && creep.store.energy === 0) {
     creep.working = false;
-    // creep.targetId = undefined; // Clear target when empty
+    creep.targetId = undefined; // Clear target when empty
   } else if (!creep.working && creep.store.getFreeCapacity('energy') === 0) {
     creep.working = true;
   }
@@ -443,7 +439,7 @@ function handleSwampExtensionBuilding(creep: Creep): void {
   let targetContainer: StructureContainer | undefined;
 
   if (creep.targetId) {
-    targetContainer = containers.find(c => c.id === creep.targetId);
+    targetContainer = containers.find(c => c.exists && c.id === creep.targetId);
   }
 
   // If no target or target is depleted, find a new swamp container
@@ -452,13 +448,6 @@ function handleSwampExtensionBuilding(creep: Creep): void {
     if (targetContainer) {
       creep.targetId = targetContainer.id;
     }
-  }
-
-  if (!targetContainer) {
-    // No swamp containers need work, help with other construction
-    console.log(`No target container, building other sites...`)
-    buildOtherConstructionSites(creep);
-    return;
   }
 
   // First priority: Fill existing extensions near this container
@@ -472,8 +461,17 @@ function handleSwampExtensionBuilding(creep: Creep): void {
     const extension = nearbyExtensions[0];
     moveWithinRange(creep, extension, 2);
     if (creep.x === extension.x && creep.y === extension.y) moveWithinRange(creep, mySpawn, 3);
-    let transferRes = creep.transfer(extension, 'energy');
-    console.log(`Builder Transfer result: ${transferRes}`)
+    if (creep.getRangeTo(extension) < 2) {
+      let transferRes = creep.transfer(extension, 'energy');
+      console.log(`Builder Transfer result: ${transferRes}`);
+      return;
+    }
+  }
+
+  if (!targetContainer) {
+    // No swamp containers need work, help with other construction
+    console.log(`No target container, building other sites...`)
+    buildOtherConstructionSites(creep);
     return;
   }
 
@@ -486,7 +484,11 @@ function handleSwampExtensionBuilding(creep: Creep): void {
     const site = nearbyConstructionSites[0];
     moveWithinRange(creep, site, 2);
     if (creep.x === site.x && creep.y === site.y) moveWithinRange(creep, mySpawn, 3);
-    creep.build(site);
+    if (creep.getRangeTo(site) <= 2) {
+      const buildResult = creep.build(site);
+      console.log(`Builder ${creep.id}, nearbyConstructionSites, build result: ${buildResult}`);
+      if (buildResult == ERR_INVALID_TARGET) site.remove();
+    }
     return;
   }
 
@@ -515,7 +517,7 @@ function harvestEnergy(creep: Creep): void {
       // if (creep.withdraw(targetContainer, 'energy') === ERR_NOT_IN_RANGE) {
       //   creep.moveTo(targetContainer);
       // }
-      return;
+      // return;
     }
   }
 
@@ -525,9 +527,9 @@ function harvestEnergy(creep: Creep): void {
   );
 
   if (containerWithEnergy) {
-    if (creep.withdraw(containerWithEnergy, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-      creep.moveTo(containerWithEnergy);
-    }
+    moveWithinRange(creep, containerWithEnergy, 1);
+    if (creep.x === containerWithEnergy.x && creep.y === containerWithEnergy.y) moveWithinRange(creep, mySpawn, 1);
+    if (creep.getRangeTo(containerWithEnergy) < 2) creep.withdraw(containerWithEnergy, 'energy');
   }
 }
 
@@ -604,9 +606,20 @@ function createExtensionSites(container: StructureContainer): void {
       ext.x === pos.x && ext.y === pos.y
     );
 
-    if (!existingSite && !existingExtension) {
+    const terrainTile = getTerrainAt(pos);
+
+    if (!existingSite && !existingExtension && terrainTile !== TERRAIN_WALL) {
       createConstructionSite(pos, StructureExtension);
       break; // Only create one at a time
+    }
+  }
+
+  // TODO: Remove construction site if
+  // no resource container is beside it anymore
+  for (let site of constructionSites) {
+    const containerNearSite = containers.filter(c => c.x > 13 && c.x < 86).find(c => getRange(c, site) <= 1);
+    if (!containerNearSite && site.progress === 0) {
+      site.remove();
     }
   }
 }
@@ -630,10 +643,17 @@ function buildOtherConstructionSites(creep: Creep): void {
     })[0];
 
   if (site) {
-
-    if (creep.build(site) === ERR_NOT_IN_RANGE) {
-      creep.moveTo(site);
+    if (creep.x === site.x && creep.y === site.y) moveWithinRange(creep, mySpawn, 1);
+    moveWithinRange(creep, site, 2);
+    if (creep.getRangeTo(site) <= 2) {
+      const buildResult = creep.build(site);
+      console.log(`Builder ${creep.id}, buildOtherConstructionSites, build result: ${buildResult}`);
+      if (buildResult == ERR_INVALID_TARGET) site.remove();
     }
+
+    // if (creep.build(site) === ERR_NOT_IN_RANGE) {
+    //   creep.moveTo(site);
+    // }
   }
 }
 
