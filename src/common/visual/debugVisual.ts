@@ -1,8 +1,8 @@
 import { findPath, getTerrainAt } from 'game/utils';
 import { StructureSpawn, StructureContainer, Position } from 'game/prototypes';
 import { Visual } from 'game/visual';
-import { TerrainConstant, TERRAIN_SWAMP, TERRAIN_WALL, TERRAIN_PLAIN } from 'game/constants';
-import { DefaultFindPathOptions, DefaultFleeFindPathOptions } from 'common/constants';
+import { TERRAIN_WALL, TERRAIN_PLAIN } from 'game/constants';
+import { DefaultFindPathOptions } from 'common/constants';
 
 export function debugContainerPathsToSpawn(
   gameVisual: Visual,

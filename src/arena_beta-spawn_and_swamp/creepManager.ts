@@ -1,9 +1,9 @@
-import { getObjectsByPrototype, getObjectById, getObjects } from 'game/utils';
-import { ATTACK, MOVE, CARRY, RANGED_ATTACK, HEAL, TOUGH, WORK } from 'game/constants';
-import { StructureSpawn, StructureContainer, Creep, StructureWall, Id, Position } from 'game/prototypes';
+import { getObjectsByPrototype } from 'game/utils';
+import { ATTACK, MOVE, CARRY, RANGED_ATTACK, HEAL, TOUGH } from 'game/constants';
+import { StructureSpawn, StructureContainer, Creep, StructureWall, Position } from 'game/prototypes';
 import { JBCreep } from 'common/lib/jbCreep';
 import { Role } from 'common/enums/role';
-import { DefaultFindPathOptions, DefaultFleeFindPathOptions } from 'common/constants';
+import { DefaultFindPathOptions } from 'common/constants';
 
 /**
  * Tracks and records Creeps
@@ -226,7 +226,7 @@ export class CreepManager {
       return;
     }
 
-    this.wallbreakers.forEach((wallbreaker, index) => {
+    this.wallbreakers.forEach((wallbreaker) => {
       // Skip if wallbreaker is invalid
       if (!wallbreaker || wallbreaker.spawning) {
         return;
@@ -453,6 +453,7 @@ export class CreepManager {
   }
 
   public debugPath(creep: Creep, path: Position[]): void {
+    if (!creep || !path) return;
     // creep.pathVisual.clear().poly(
     //   path,
     //   {

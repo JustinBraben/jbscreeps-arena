@@ -1,11 +1,9 @@
 // common/lib/jbCreep.ts
 import { Creep, Position, Structure, Source, StructureContainer, StructureSpawn } from 'game/prototypes';
 import { Role } from 'common/enums/role';
-import { Core } from 'common/core';
 import { DirectionConstant, ResourceConstant, CreepMoveResult, ERR_INVALID_ARGS } from 'game/constants'
 import { FindPathOptions } from 'game/path-finder';
 import { ScoreCollector } from "arena/season_beta/collect_and_control/basic/prototypes";
-import { getObjectById, getObjectsByPrototype } from 'game/utils';
 
 export class JBCreep {
   public readonly creep: Creep;
@@ -146,9 +144,9 @@ export class JBCreep {
     }
   }
 
-  private performWallbreakerRole(): void {
-    // Implement wallbreaker logic
-  }
+  // private performWallbreakerRole(): void {
+  //   // Implement wallbreaker logic
+  // }
 
   private performMeleeRole(): void {
     // Implement melee combat logic

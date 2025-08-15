@@ -1,12 +1,6 @@
-import { ATTACK, WORK, CARRY, MOVE, RANGED_ATTACK, TOUGH, HEAL, RESOURCE_ENERGY, ERR_NOT_IN_RANGE, OK, BODYPART_COST, BodyPartConstant } from "game/constants";
+import { CARRY, MOVE } from "game/constants";
 import { Creep, GameObject, Position, StructureSpawn, _Constructor, _ConstructorById } from "game/prototypes";
-import { getDirection,
-  getObjectsByPrototype,
-  getRange,
-  getTicks,
-  createConstructionSite,
-  findPath
-} from "game/utils";
+import { getObjectsByPrototype } from "game/utils";
 
 // Define Role enum for better organization
 enum Role {
@@ -24,10 +18,6 @@ interface ExtendedCreep extends Creep {
   customMethod?(): void;
 }
 
-interface ExtendedCreepConstructor
-    extends _Constructor<ExtendedCreep>,
-      _ConstructorById<ExtendedCreep> {}
-
 // const ExtendedCreep: ExtendedCreepConstructor;
 
 // Global variables for game state
@@ -42,6 +32,8 @@ export function loop(): void {
 
   // Spawn logic
   handleSpawning();
+
+  if (!mySpawn || !enemySpawn) return;
 }
 
 // All things we want to get every tick should be saved here

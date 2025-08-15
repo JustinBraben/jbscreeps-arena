@@ -1,10 +1,8 @@
-import { getObjectsByPrototype, getObjectById, getObjects, findPath, getCpuTime } from 'game/utils';
-import { ATTACK, MOVE, CARRY, RANGED_ATTACK, HEAL, TOUGH, WORK } from 'game/constants';
-import { StructureSpawn, StructureContainer, Creep, StructureWall, Id, Position, Source } from 'game/prototypes';
+import { } from 'game/utils';
+import { } from 'game/constants';
+import { } from 'game/prototypes';
 import { Visual } from 'game/visual';
 import { CreepManager } from './creepManager';
-import { debugContainerPathsToSpawn, debugExtensionPlaceholders, debugTileCost } from 'common/visual/debugVisual';
-import { DefaultFindPathOptions } from "common/constants";
 
 let creepManager = new CreepManager();
 
@@ -33,7 +31,7 @@ export function loop(): void {
     // console.log(`Current buildQueue: ${buildQueue}`);
 
     const nextRole = buildQueue[0];
-    if (creepManager.spawnCreepByRole(nextRole)) {
+    if (nextRole !== undefined && creepManager.spawnCreepByRole(nextRole)) {
       buildQueue.shift(); // Remove from queue if successfully spawned
     }
   }
@@ -41,10 +39,10 @@ export function loop(): void {
   // Run creep logic
   creepManager.updateCreeps();
 
-  // Get our spawn
-  const mySpawn = getObjectsByPrototype(StructureSpawn).find(i => i.my);
-  // Get all containers
-  const containers = getObjectsByPrototype(StructureContainer);
+  // // Get our spawn
+  // const mySpawn = getObjectsByPrototype(StructureSpawn).find(i => i.my);
+  // // Get all containers
+  // const containers = getObjectsByPrototype(StructureContainer);
 
   // // DEBUG INFO
   // debugContainerPathsToSpawn(gameVisual, containers, mySpawn);
