@@ -2,7 +2,7 @@ import { StructureContainer, StructureSpawn } from "game/prototypes";
 import { getObjectsByPrototype } from "game/utils";
 
 export function getContainers(): StructureContainer[] {
-  return getObjectsByPrototype(StructureContainer);
+  return getObjectsByPrototype(StructureContainer).filter(container => container.store.energy > 0);
 }
 
 export function getContainersNearSpawn(containers: StructureContainer[], spawn: StructureSpawn): StructureContainer[] {

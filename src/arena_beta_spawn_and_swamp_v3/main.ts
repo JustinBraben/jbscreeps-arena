@@ -49,8 +49,8 @@ function runHauler(hauler: Creep): void {
   if (hauler.store.energy === 0) {
     // Consider fallback containers
     let targetContainer = hauler.findClosestByPath(mySpawnContainers);
-    if (!targetContainer) targetContainer = hauler.findClosestByPath(containers);
-    if (!targetContainer) return;
+    if (targetContainer === null) targetContainer = hauler.findClosestByPath(containers);
+    if (targetContainer === null) return;
 
     if (hauler.getRangeTo(targetContainer) > 1) {
       moveWithinRange(hauler, targetContainer, 1);
@@ -150,15 +150,13 @@ function updateGameState(): void {
   myExtensionsToFill = getMyExtensionsToFill();
   containers = getContainers();
   walls = getObjectsByPrototype(StructureWall);
+  mySpawnContainers = getContainersNearSpawn(containers, mySpawn);
 
-  // Only update containers if we have Haulers or Builders
-  if (myHaulers.length > 0 || myBuilders.length > 0) {
-    mySpawnContainers = getContainersNearSpawn(containers, mySpawn);
-  }
+  // Consider only update containers if we have Haulers or Builders
 }
 
 function handleSpawning(): void {
-  if (myCreeps.length < 10 && !mySpawn.spawning) {
+  if (!mySpawn.spawning) {
     if (myHaulers.length < 2) {
       const result = mySpawn.spawnCreep([CARRY, CARRY, MOVE, MOVE]);
       if (result.object) {
@@ -173,8 +171,13 @@ function handleSpawning(): void {
       } else if(result.error) {
         console.log(`Failed to spawn Builder ${result.error}`);
       }
-    } else if (myMelees.length < 5) {
-      const result = mySpawn.spawnCreep([TOUGH, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, MOVE]);
+    } else if (myMelees.length < 40) {
+      const result = mySpawn.spawnCreep([
+        TOUGH, TOUGH, TOUGH, TOUGH, TOUGH,
+        ATTACK, ATTACK, ATTACK, ATTACK, ATTACK,
+        MOVE,
+        MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE
+      ]);
       if (result.object) {
         console.log(`Spawning Melee: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
       } else if(result.error) {

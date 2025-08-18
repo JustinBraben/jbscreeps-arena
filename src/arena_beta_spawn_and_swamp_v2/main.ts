@@ -37,6 +37,7 @@ import { Visual } from "game/visual";
 import { Role } from 'common/enums/role';
 import { debugExtensionPlaceholders } from "common/visual/debugVisual";
 import { DefaultFindPathOptions } from "common/constants";
+import { moveWithinRange } from "common/creepMovementUtils";
 
 // Extend the Creep interface with our custom properties
 declare module "game/prototypes" {
@@ -769,7 +770,7 @@ function runHealer(creep: Creep): void {
       .sort((a, b) => getRange(a, creep) - getRange(b, creep))[0];
 
     if (attacker && getRange(attacker, creep) > 2) {
-      creep.moveTo(attacker);
+      moveWithinRange(creep, attacker, 2);
     }
   }
 
@@ -795,12 +796,6 @@ function flee(creep: Creep, threats: GameObject[], range: number): void {
     if (direction) {}
     // creep.move(direction);
     creep.moveTo(mySpawn);
-  }
-}
-
-function moveWithinRange(creep: Creep, otherPos: Position, idealRange: number): void {
-  if (getRange(creep, otherPos) > idealRange) {
-    creep.moveTo(otherPos);
   }
 }
 
