@@ -94,8 +94,5 @@ export function getRangers(creeps: Creep[]): Creep[] {
 }
 
 export function getHealers(creeps: Creep[]): Creep[] {
-  return creeps.filter(creep =>
-    creepHasBodyPartConstant(creep, MOVE) &&
-    creepHasBodyPartConstant(creep, HEAL)
-  );
+  return creeps.filter(creep => creep.body.some(part => part.type === HEAL));
 }

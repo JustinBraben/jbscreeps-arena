@@ -753,11 +753,9 @@ function runHealer(creep: Creep): void {
     const target = healTargets[0];
     const range = getRange(target, creep);
 
-
-
-    if (range <= 1) {
+    if (range == 1) {
       creep.heal(target);
-    } else if (range <= 3) {
+    } else if (range == 3) {
       creep.rangedHeal(target);
       creep.moveTo(target);
     } else {
