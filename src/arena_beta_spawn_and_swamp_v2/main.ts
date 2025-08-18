@@ -10,7 +10,8 @@ import {
   BODYPART_COST,
   BodyPartConstant,
   TERRAIN_WALL,
-  ERR_INVALID_TARGET
+  ERR_INVALID_TARGET,
+  OK
 } from "game/constants";
 import {
   Creep,
@@ -35,7 +36,7 @@ import { searchPath } from "game/path-finder";
 import { Visual } from "game/visual";
 import { Role } from 'common/enums/role';
 import { debugExtensionPlaceholders } from "common/visual/debugVisual";
-import { DefaultFindPathOptions, DefaultFleeFindPathOptions } from "common/constants";
+import { DefaultFindPathOptions } from "common/constants";
 
 // Extend the Creep interface with our custom properties
 declare module "game/prototypes" {
@@ -333,15 +334,8 @@ function runHauler(creep: Creep): void {
     // const droppedEnergy = getObjectsByPrototype(Resource)
     //   .sort((a, b) => getRange(a, creep) - getRange(b, creep))[0];
 
-    const targetContainer = creep.findClosestByPath(
-      containers.filter(c => c.store.energy > 0)
-    );
-    const haulerFreeCapacity = creep.store.getFreeCapacity(RESOURCE_ENERGY);
-
-    if (haulerFreeCapacity !== null && haulerFreeCapacity > 0 && targetContainer) {
-      moveWithinRange(creep, targetContainer, 1);
-      if (creep.getRangeTo(targetContainer) < 2) creep.withdraw(targetContainer, RESOURCE_ENERGY);
-    }
+    // Harvest energy
+    harvestEnergy(creep);
   } else {
     // Deliver energy - Prioritize closest extension with free capacity
     // otherwise attempt to deliver to spawn
@@ -369,12 +363,7 @@ function runHauler(creep: Creep): void {
 
     // Find the closest structure that needs energy
     const myNotFullExtensions = myExtensions
-      .filter(extension => {
-        const extensionStore = extension.store;
-        const extensionStoreFreeCapacity = extensionStore.getFreeCapacity(RESOURCE_ENERGY);
-        return extensionStore !== null && extensionStore !== undefined && extensionStoreFreeCapacity !== null && extensionStoreFreeCapacity > 0;
-      }
-    );
+      .filter(extension => extension.store.energy < 100);
     const myClosestExtension = creep.findClosestByPath(myNotFullExtensions);
     // DEBUG
     // console.log(`myExtensions.length: ${myExtensions.length}`);
@@ -382,14 +371,24 @@ function runHauler(creep: Creep): void {
     // console.log(`myExtensionFreeCapacity: ${myExtensionFreeCapacity}`);
     // console.log(`mySpawnStoreFreeCapacity: ${mySpawnStoreFreeCapacity}`);
 
-    const mySpawnFreeCapacity = mySpawn.store.getFreeCapacity(RESOURCE_ENERGY);
+    // const mySpawnFreeCapacity = mySpawn.store.getFreeCapacity(RESOURCE_ENERGY);
 
-    if (mySpawnFreeCapacity !== null && mySpawnFreeCapacity !== undefined && mySpawnFreeCapacity > 0) {
+    if (mySpawn.store.energy < 1000) {
+      const targetContainer = creep.findClosestByPath(
+        containers.filter(c => c.store.energy > 0)
+      );
+
       moveWithinRange(creep, mySpawn, 1);
-      if (creep.getRangeTo(mySpawn) < 2) creep.transfer(mySpawn, RESOURCE_ENERGY);
+      if (getRange(creep, mySpawn) < 2) {
+        const withdrawRes = creep.transfer(mySpawn, 'energy');
+        if (withdrawRes == OK) moveWithinRange(creep, targetContainer!, 1);
+      }
     } else if(myClosestExtension !== null) {
       moveWithinRange(creep, myClosestExtension, 1);
-      if (creep.getRangeTo(myClosestExtension) < 2) creep.transfer(myClosestExtension, RESOURCE_ENERGY);
+      if (getRange(creep, myClosestExtension) < 2) {
+        const transferRes = creep.transfer(myClosestExtension, 'energy');
+        if (transferRes == OK) moveWithinRange(creep, mySpawn!, 1);
+      }
     }
 
     // if (myClosestExtension !== null) {
@@ -499,9 +498,12 @@ function handleSwampExtensionBuilding(creep: Creep): void {
     if (creep.getRangeTo(site) <= 2) {
       const buildResult = creep.build(site);
       console.log(`Builder ${creep.id}, nearbyConstructionSites, build result: ${buildResult}`);
-      if (buildResult == ERR_INVALID_TARGET) site.remove();
+      if (buildResult == ERR_INVALID_TARGET) {
+        site.remove();
+        return;
+      }
     }
-    return;
+    // return;
   }
 
   // Third priority: Create new extension construction sites if needed
@@ -626,14 +628,14 @@ function createExtensionSites(container: StructureContainer): void {
     }
   }
 
-  // TODO: Remove construction site if
-  // no resource container is beside it anymore
-  for (let site of constructionSites) {
-    const containerNearSite = containers.filter(c => c.x > 13 && c.x < 86).find(c => getRange(c, site) <= 1);
-    if (!containerNearSite && site.progress === 0) {
-      site.remove();
-    }
-  }
+  // // TODO: Remove construction site if
+  // // no resource container is beside it anymore
+  // for (let site of constructionSites) {
+  //   const containerNearSite = containers.filter(c => c.x > 13 && c.x < 86).find(c => getRange(c, site) <= 1);
+  //   if (site !== createdSite && !containerNearSite && site.progress === 0) {
+  //     site.remove();
+  //   }
+  // }
 }
 
 function buildOtherConstructionSites(creep: Creep): void {
@@ -719,7 +721,8 @@ function runRangedAttacker(creep: Creep): void {
       // if (getRange(creep, target) > 3) {
       //   creep.moveTo(target, DefaultFleeFindPathOptions);
       // }
-      creep.moveTo(target, DefaultFleeFindPathOptions);
+      // creep.moveTo(target, DefaultFleeFindPathOptions);
+      flee(creep, targets, 3);
     } else if (range > 3) {
       moveWithinRange(creep, target, 3);
     }
@@ -789,7 +792,9 @@ function flee(creep: Creep, threats: GameObject[], range: number): void {
       result.path[0].x - creep.x,
       result.path[0].y - creep.y
     );
-    creep.move(direction);
+    if (direction) {}
+    // creep.move(direction);
+    creep.moveTo(mySpawn);
   }
 }
 
