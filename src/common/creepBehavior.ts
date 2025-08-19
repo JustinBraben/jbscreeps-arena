@@ -1,6 +1,6 @@
 import { ConstructionSite, Creep, StructureContainer, StructureExtension, StructureRampart, StructureSpawn } from "game/prototypes";
 import { flee, moveWithinRange } from "./creepMovementUtils";
-import { ERR_INVALID_TARGET, OK, RESOURCE_ENERGY } from "game/constants";
+import { /*ERR_INVALID_TARGET,*/ OK, RESOURCE_ENERGY } from "game/constants";
 import { DefaultFindPathOptions } from "./constants";
 import { findConstructionSiteToBuild } from "./filterConstructionSites";
 import { getCreepsWithinRangeOfCreep } from "./filterCreeps";
@@ -19,12 +19,12 @@ export function fleeWithinRange(
   creep: Creep,
   allySpawn: StructureSpawn,
   creepsToAvoid: Creep[],
-  rangeFromAvoid: number,
-  countToFlee: number,
+  rangeAvoid: number,
+  countAvoid: number,
 ): boolean {
-  const nearbyEnemies = getCreepsWithinRangeOfCreep(creep, creepsToAvoid, rangeFromAvoid);
-  if (nearbyEnemies.length >= countToFlee) {
-    flee(creep, allySpawn, nearbyEnemies, 8);
+  const nearbyEnemies = getCreepsWithinRangeOfCreep(creep, creepsToAvoid, rangeAvoid);
+  if (nearbyEnemies.length >= countAvoid) {
+    flee(creep, allySpawn, nearbyEnemies, rangeAvoid);
     return true;
   }
 
@@ -109,7 +109,7 @@ export function tryBuildConstructionSite(
       const buildResult = creep.build(site);
       res = true;
       console.log(`Builder ${creep.id}, buildOtherConstructionSites, build result: ${buildResult}`);
-      if (buildResult == ERR_INVALID_TARGET) site.remove();
+      // if (buildResult == ERR_INVALID_TARGET) site.remove();
     }
   }
 

@@ -112,7 +112,7 @@ export function planRemoveExtensionConstructionSites(
 ): void {
   for (let site of allyConstructionSites) {
     // Skip Removing sites that have been halfway built
-    if (site.progress > (site.progressTotal / 2)) continue;
+    if (site.progress !== 0) continue;
     if (site.structure instanceof(StructureRampart)) continue;
 
     const containerNearSite = swampContainers.find(c => c.getRangeTo(site) <= extensionRange);

@@ -3,11 +3,11 @@ import { Creep } from "game/prototypes";
 import { getObjectsByPrototype } from "game/utils";
 
 export function getMyCreeps(): Creep[] {
-  return getObjectsByPrototype(Creep).filter(c => c.my && c.hits > 0);
+  return getObjectsByPrototype(Creep).filter(c => c.my && c.hits > 0 && !c.spawning);
 }
 
 export function getEnemyCreeps(): Creep[] {
-  return getObjectsByPrototype(Creep).filter(c => !c.my && c.hits > 0);
+  return getObjectsByPrototype(Creep).filter(c => !c.my && c.hits > 0 && !c.spawning);
 }
 
 // Helper function to check if creep has a specific body part
@@ -67,7 +67,8 @@ export function getHaulers(creeps: Creep[]): Creep[] {
   return creeps.filter(creep =>
     creep.body.some(part => part.type === MOVE) &&
     creep.body.some(part => part.type === CARRY) &&
-    !creep.body.some(part => part.type === WORK)
+    !creep.body.some(part => part.type === WORK) &&
+    !creep.spawning
   );
 }
 
@@ -75,21 +76,24 @@ export function getBuilders(creeps: Creep[]): Creep[] {
   return creeps.filter(creep =>
     creep.body.some(part => part.type === MOVE) &&
     creep.body.some(part => part.type === CARRY) &&
-    creep.body.some(part => part.type === WORK)
+    creep.body.some(part => part.type === WORK) &&
+    !creep.spawning
   );
 }
 
 export function getMelees(creeps: Creep[]): Creep[] {
   return creeps.filter(creep =>
     creep.body.some(part => part.type === MOVE) &&
-    creep.body.some(part => part.type === ATTACK)
+    creep.body.some(part => part.type === ATTACK) &&
+    !creep.spawning
   );
 }
 
 export function getRangers(creeps: Creep[]): Creep[] {
   return creeps.filter(creep =>
     creep.body.some(part => part.type === MOVE) &&
-    creep.body.some(part => part.type === RANGED_ATTACK)
+    creep.body.some(part => part.type === RANGED_ATTACK) &&
+    !creep.spawning
   );
 }
 
