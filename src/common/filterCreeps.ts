@@ -65,34 +65,38 @@ export function getAttackCreeps(creeps: Creep[]): Creep[] {
 
 export function getHaulers(creeps: Creep[]): Creep[] {
   return creeps.filter(creep =>
-    creepHasBodyPartConstant(creep, MOVE) &&
-    creepHasBodyPartConstant(creep, CARRY) &&
-    !creepHasBodyPartConstant(creep, WORK)
+    creep.body.some(part => part.type === MOVE) &&
+    creep.body.some(part => part.type === CARRY) &&
+    !creep.body.some(part => part.type === WORK)
   );
 }
 
 export function getBuilders(creeps: Creep[]): Creep[] {
   return creeps.filter(creep =>
-    creepHasBodyPartConstant(creep, MOVE) &&
-    creepHasBodyPartConstant(creep, CARRY) &&
-    creepHasBodyPartConstant(creep, WORK)
+    creep.body.some(part => part.type === MOVE) &&
+    creep.body.some(part => part.type === CARRY) &&
+    creep.body.some(part => part.type === WORK)
   );
 }
 
 export function getMelees(creeps: Creep[]): Creep[] {
   return creeps.filter(creep =>
-    creepHasBodyPartConstant(creep, MOVE) &&
-    creepHasBodyPartConstant(creep, ATTACK)
+    creep.body.some(part => part.type === MOVE) &&
+    creep.body.some(part => part.type === ATTACK)
   );
 }
 
 export function getRangers(creeps: Creep[]): Creep[] {
   return creeps.filter(creep =>
-    creepHasBodyPartConstant(creep, MOVE) &&
-    creepHasBodyPartConstant(creep, RANGED_ATTACK)
+    creep.body.some(part => part.type === MOVE) &&
+    creep.body.some(part => part.type === RANGED_ATTACK)
   );
 }
 
 export function getHealers(creeps: Creep[]): Creep[] {
   return creeps.filter(creep => creep.body.some(part => part.type === HEAL));
+}
+
+export function getCreepsWithinRangeOfCreep(creep: Creep, potentialCreeps: Creep[], range: number): Creep[] {
+  return potentialCreeps.filter(maybeNearbyCreep => maybeNearbyCreep.getRangeTo(creep) < range);
 }

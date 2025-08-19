@@ -15,7 +15,6 @@ import {
 } from "game/constants";
 import {
   Creep,
-  GameObject,
   StructureSpawn,
   StructureContainer,
   ConstructionSite,
@@ -25,19 +24,18 @@ import {
   StructureRampart
 } from "game/prototypes";
 import {
-  getDirection,
   getObjectsByPrototype,
   getRange,
   getTicks,
   createConstructionSite,
   getTerrainAt
 } from "game/utils";
-import { searchPath } from "game/path-finder";
 import { Visual } from "game/visual";
 import { Role } from 'common/enums/role';
 import { debugExtensionPlaceholders } from "common/visual/debugVisual";
 import { DefaultFindPathOptions } from "common/constants";
-import { moveWithinRange } from "common/creepMovementUtils";
+import { flee, moveWithinRange } from "common/creepMovementUtils";
+import { findConstructionSiteToBuild } from "common/filterConstructionSites";
 
 // Extend the Creep interface with our custom properties
 declare module "game/prototypes" {
@@ -326,7 +324,7 @@ function runHauler(creep: Creep): void {
   // Stay away from enemies
   const nearbyEnemies = enemyCreeps.filter(e => getRange(e, creep) < 8);
   if (nearbyEnemies.length >= 2) {
-    flee(creep, nearbyEnemies, 8);
+    flee(creep, mySpawn, nearbyEnemies, 8);
     return;
   }
 
@@ -641,21 +639,7 @@ function createExtensionSites(container: StructureContainer): void {
 
 function buildOtherConstructionSites(creep: Creep): void {
   // Fallback to building any construction sites
-  const site = constructionSites
-    .sort((a, b) => {
-      // Prioritize sites near spawn
-      const aDist = mySpawn ? getRange(a, mySpawn) : 100;
-      const bDist = mySpawn ? getRange(b, mySpawn) : 100;
-
-      // If both are close to spawn, prioritize by progress
-      if (aDist < 10 && bDist < 10) {
-        return (b.progress / b.progressTotal) - (a.progress / a.progressTotal);
-      }
-
-      // Otherwise prioritize by distance
-      if (aDist !== bDist) return aDist - bDist;
-      return getRange(a, creep) - getRange(b, creep);
-    })[0];
+  const site = findConstructionSiteToBuild(creep, mySpawn, constructionSites);
 
   if (site) {
     if (creep.x === site.x && creep.y === site.y) moveWithinRange(creep, mySpawn, 1);
@@ -723,7 +707,7 @@ function runRangedAttacker(creep: Creep): void {
       //   creep.moveTo(target, DefaultFleeFindPathOptions);
       // }
       // creep.moveTo(target, DefaultFleeFindPathOptions);
-      flee(creep, targets, 3);
+      flee(creep, mySpawn, targets, 3);
     } else if (range > 3) {
       moveWithinRange(creep, target, 3);
     }
@@ -775,25 +759,7 @@ function runHealer(creep: Creep): void {
   // Stay away from enemies
   const nearbyEnemies = enemyCreeps.filter(e => getRange(e, creep) < 5);
   if (nearbyEnemies.length > 3) {
-    flee(creep, nearbyEnemies, 5);
-  }
-}
-
-function flee(creep: Creep, threats: GameObject[], range: number): void {
-  const result = searchPath(
-    creep,
-    threats.map(t => ({ pos: t, range })),
-    { flee: true }
-  );
-
-  if (result.path.length > 0 && result.path[0] !== undefined) {
-    const direction = getDirection(
-      result.path[0].x - creep.x,
-      result.path[0].y - creep.y
-    );
-    if (direction) {}
-    // creep.move(direction);
-    creep.moveTo(mySpawn);
+    flee(creep, mySpawn, nearbyEnemies, 5);
   }
 }
 

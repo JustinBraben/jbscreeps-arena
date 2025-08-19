@@ -1,11 +1,14 @@
 import { ATTACK, CARRY, HEAL, MOVE, OK, RANGED_ATTACK, RESOURCE_ENERGY, /*TOUGH,*/ WORK } from "game/constants";
-import { Creep, GameObject, Position, StructureContainer, StructureExtension, StructureSpawn, StructureWall, _Constructor, _ConstructorById } from "game/prototypes";
-import { getDirection, getObjectsByPrototype } from "game/utils";
+import { ConstructionSite, Creep, Position, StructureContainer, StructureExtension, StructureRampart, StructureSpawn, StructureWall, _Constructor, _ConstructorById } from "game/prototypes";
+import { getObjectsByPrototype } from "game/utils";
 import { getBuilders, getEnemyCreeps, getHaulers, getHealers, getMelees, getMyCreeps, getRangers } from 'common/filterCreeps';
 import { getMyExtensionsToFill } from "common/filterExtensions";
-import { getContainers, getContainersNearSpawn } from "common/filterContainers";
-import { moveWithinRange } from "common/creepMovementUtils";
-import { searchPath } from "game/path-finder";
+import { getContainers, getContainersInSwamp, getContainersNearSpawn } from "common/filterContainers";
+import { flee, moveWithinRange } from "common/creepMovementUtils";
+import { fleeWithinRange, tryBuildConstructionSite, tryBuildSpawnRamparts, /*tryTransferSwampExtension,*/ tryWithdrawContainer } from "common/creepBehavior";
+import { planConstructionSites } from "common/constructionPlan";
+import { getConstructionSites, getMyConstructionSites } from "common/filterConstructionSites";
+// import { DefaultFindPathOptions } from "common/constants";
 
 // Global variables for game state
 let mySpawn: StructureSpawn;
@@ -15,10 +18,17 @@ let myBuilders: Creep[];
 let myMelees: Creep[];
 let myHealers: Creep[];
 let myRangers: Creep[];
-let containers: StructureContainer[];
-let walls: StructureWall[];
 let mySpawnContainers: StructureContainer[];
 let myExtensionsToFill: StructureExtension[];
+let myConstructionSites: ConstructionSite[];
+let myRamparts: StructureRampart[];
+
+let constructionSites: ConstructionSite[];
+let containers: StructureContainer[];
+let swampContainers: StructureContainer[];
+let walls: StructureWall[];
+let ramparts: StructureRampart[];
+
 let enemySpawn: StructureSpawn;
 let enemyCreeps: Creep[];
 
@@ -53,17 +63,20 @@ export function loop(): void {
   }
 
   if (myExtensionsToFill.length > 0) {}
+
+  planConstructionSites(mySpawn, myConstructionSites, myRamparts, swampContainers, 2);
 }
 
 function runHauler(hauler: Creep): void {
-  // console.log(`hauler: ${hauler.id} (Health: ${hauler.hits}/${hauler.hitsMax})`);
-
   // Stay away from enemies
-  const nearbyEnemies = enemyCreeps.filter(e => e.getRangeTo(hauler) < 8);
-  if (nearbyEnemies.length >= 2) {
-    flee(hauler, nearbyEnemies, 8);
+  // const nearbyEnemies = enemyCreeps.filter(e => e.getRangeTo(hauler) < 8);
+  if (fleeWithinRange(hauler, mySpawn, enemyCreeps, 8, 2)) {
     return;
   }
+
+  // let hasMoved = false;
+  // let hasWithdran = false;
+  // let hasTransferred = false;
 
   if (hauler.store.energy === 0) {
     // Consider fallback containers
@@ -71,17 +84,20 @@ function runHauler(hauler: Creep): void {
     if (targetContainer === null) targetContainer = hauler.findClosestByPath(containers);
     if (targetContainer === null) return;
 
+    // Determine destination to transfer energy into
+    let targetTransfer = null;
+    targetTransfer = mySpawn;
+
     if (hauler.getRangeTo(targetContainer) > 1) {
       moveWithinRange(hauler, targetContainer, 1);
-      if (hauler.getRangeTo(targetContainer) == 1) {
-        const withdrawResult = hauler.withdraw(targetContainer, RESOURCE_ENERGY);
-        console.log(`hauler: ${hauler.id} Moved to container: ${targetContainer.id}, CreepWithdrawResult: ${withdrawResult}`);
-      }
+      tryWithdrawContainer(hauler, targetContainer);
     } else if (hauler.getRangeTo(targetContainer) == 1) {
       const withdrawResult = hauler.withdraw(targetContainer, RESOURCE_ENERGY);
       if (withdrawResult === OK) {
         console.log(`hauler: ${hauler.id} CreepWithdrawResult: ${withdrawResult}, then moved to mySpawn`);
-        moveWithinRange(hauler, mySpawn, 1);
+        const targetExtension = hauler.findClosestByPath(myExtensionsToFill);
+        if (targetExtension) targetTransfer = targetExtension;
+        moveWithinRange(hauler, targetTransfer, 1);
       }
     }
   } else {
@@ -90,7 +106,6 @@ function runHauler(hauler: Creep): void {
     const targetExtensionExists = targetExtension !== null;
     let pathToMyExtension: Position[];
     if (targetExtension) pathToMyExtension = hauler.findPathTo(targetExtension);
-
 
     if ((mySpawn.store.energy < 1000 && !targetExtensionExists) || (mySpawn.store.energy < 1000 && targetExtensionExists && pathToMySpawn.length < pathToMyExtension!.length)) {
       moveWithinRange(hauler, mySpawn, 1);
@@ -120,9 +135,22 @@ function runHauler(hauler: Creep): void {
 }
 
 function runBuilder(creep: Creep): void {
+  if (fleeWithinRange(creep, mySpawn, enemyCreeps, 20, 1)) {
+    return;
+  }
+
   // Try fill up empty extensions
 
   // Try and build unfinished construction sites
+  // Phase 1: Build spawn rampart if it doesn't exist
+  tryBuildSpawnRamparts(creep, mySpawn, myConstructionSites);
+
+  // tryTransferSwampExtension(creep, mySpawn, myExtensionsToFill, swampContainers);
+
+  // Fallback to building any construction sites
+  if (tryBuildConstructionSite(creep, mySpawn, myConstructionSites)) {
+    return;
+  }
 
   // Otherwise just hauling
   runHauler(creep);
@@ -135,7 +163,7 @@ function runMelee(creep: Creep): void {
 
   // Stay away from enemies
   const nearbyEnemies = enemyCreeps.filter(e => e.getRangeTo(creep) < 10);
-  if (nearbyEnemies.length === 0 && creep.hits !== creep.hitsMax) {
+  if (myHealers.length > 0 && nearbyEnemies.length === 0 && creep.hits !== creep.hitsMax) {
     // flee(creep, nearbyEnemies, 5);
 
     // Wait to heal up
@@ -200,25 +228,7 @@ function runHealer(creep: Creep): void {
   // Stay away from enemies
   const nearbyEnemies = enemyCreeps.filter(e => e.getRangeTo(creep) < 5);
   if (nearbyEnemies.length > 3) {
-    flee(creep, nearbyEnemies, 5);
-  }
-}
-
-function flee(creep: Creep, threats: GameObject[], range: number): void {
-  const result = searchPath(
-    creep,
-    threats.map(t => ({ pos: t, range })),
-    { flee: true }
-  );
-
-  if (result.path.length > 0 && result.path[0] !== undefined) {
-    const direction = getDirection(
-      result.path[0].x - creep.x,
-      result.path[0].y - creep.y
-    );
-    if (direction) {}
-    // creep.move(direction);
-    creep.moveTo(mySpawn);
+    flee(creep, mySpawn, nearbyEnemies, 5);
   }
 }
 
@@ -302,9 +312,14 @@ function updateGameState(): void {
   myHealers = getHealers(myCreeps);
   myRangers = getRangers(myCreeps);
   myExtensionsToFill = getMyExtensionsToFill();
+  constructionSites = getConstructionSites();
+  myConstructionSites = getMyConstructionSites(constructionSites);
   containers = getContainers();
   walls = getObjectsByPrototype(StructureWall);
+  ramparts = getObjectsByPrototype(StructureRampart);
+  myRamparts = ramparts.filter(r => r.my);
   mySpawnContainers = getContainersNearSpawn(containers, mySpawn);
+  swampContainers = getContainersInSwamp(containers);
 
   // Consider only update containers if we have Haulers or Builders
 }

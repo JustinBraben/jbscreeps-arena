@@ -10,5 +10,5 @@ export function getContainersNearSpawn(containers: StructureContainer[], spawn: 
 }
 
 export function getContainersInSwamp(containers: StructureContainer[]): StructureContainer[] {
-  return containers.filter(container => container.x > 13 && container.x < 86)
+  return containers.filter(container => container.x > 13 && container.x < 86 && container.ticksToDecay !== undefined)
 }
