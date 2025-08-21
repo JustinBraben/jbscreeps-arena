@@ -77,12 +77,17 @@ export function getMeleeParts(spawn: StructureSpawn, extensions: StructureExtens
 }
 
 export function getRangerParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK];
+  let parts: BodyPartConstant[] = [MOVE, MOVE, RANGED_ATTACK];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
     if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
       parts.push(MOVE);
+    }
+    partsCost = getPartsEnergy(parts);
+
+    if (BODYPART_COST[RANGED_ATTACK] + partsCost <= spawnEnergy) {
+      parts.push(RANGED_ATTACK);
     }
     partsCost = getPartsEnergy(parts);
 

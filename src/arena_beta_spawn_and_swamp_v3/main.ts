@@ -1,6 +1,6 @@
 import { OK, RESOURCE_ENERGY } from "game/constants";
 import { ConstructionSite, Creep, Position, Resource, StructureContainer, StructureExtension, StructureRampart, StructureSpawn, StructureWall, _Constructor, _ConstructorById } from "game/prototypes";
-import { getObjectsByPrototype } from "game/utils";
+import { getObjectsByPrototype, getTicks } from "game/utils";
 import { getBuilders, getEnemyCreeps, getHaulers, getHealers, getMelees, getMyCreeps, getRangers } from 'common/filterCreeps';
 import { getMyExtensions, getMyExtensionsToFill, getTotalSpawnEnergy } from "common/filterExtensions";
 import { getContainers, getContainersInSwamp, getContainersNearSpawn } from "common/filterContainers";
@@ -369,7 +369,7 @@ function runRanger(creep: Creep): void {
     // flee(creep, mySpawn, nearbyEnemyMelees, 8);
     // if (target && creep.getRangeTo(target) <= 5)
     if (attTarget && creep.getRangeTo(attTarget) <= 3) creep.rangedAttack(attTarget);
-    if (closestAllyBuilder) {
+    if (closestAllyBuilder && creep.getRangeTo(closestAllyBuilder) > 6) {
       moveWithinRange(creep, closestAllyBuilder, 2);
     } else {
       moveWithinRange(creep, mySpawn, 3);
@@ -436,6 +436,10 @@ function handleSpawning(): void {
       return;
     }
 
+    if (getTicks() > 100 && getTotalSpawnEnergy(mySpawn, myExtensions) < 500) {
+      return;
+    }
+
     // if (getTicks() > 500 && getTotalSpawnEnergy(mySpawn, myExtensions) < 500) {
     //   return;
     // }
@@ -452,7 +456,17 @@ function handleSpawning(): void {
       } else if(result.error) {
         // console.log(`Failed to spawn Hauler ${result.error}`);
       }
-    } else if (myBuilders.length < 1) {
+    } else if (myRangers.length < 1) {
+      const parts = getRangerParts(mySpawn, myExtensions);
+      const result = mySpawn.spawnCreep(parts);
+      // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
+      if (result.object) {
+        console.log(`Spawning Melee: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
+      } else if(result.error) {
+        // console.log(`Failed to spawn Melee ${result.error}`);
+      }
+    }
+    else if (myBuilders.length < 1) {
       const parts = getBuilderParts(mySpawn, myExtensions);
       const result = mySpawn.spawnCreep(parts);
       // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
@@ -463,15 +477,6 @@ function handleSpawning(): void {
       }
     } else if (myMelees.length < 2) {
       const parts = getMeleeParts(mySpawn, myExtensions);
-      const result = mySpawn.spawnCreep(parts);
-      // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
-      if (result.object) {
-        console.log(`Spawning Melee: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-      } else if(result.error) {
-        // console.log(`Failed to spawn Melee ${result.error}`);
-      }
-    } else if (myRangers.length < 2) {
-      const parts = getRangerParts(mySpawn, myExtensions);
       const result = mySpawn.spawnCreep(parts);
       // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
       if (result.object) {
