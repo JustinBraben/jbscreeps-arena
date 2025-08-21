@@ -14,7 +14,7 @@ export function getPartsEnergy(parts: BodyPartConstant[]): number {
 }
 
 export function getHaulerParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [MOVE];
+  let parts: BodyPartConstant[] = [MOVE, CARRY];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
@@ -31,10 +31,20 @@ export function getHaulerParts(spawn: StructureSpawn, extensions: StructureExten
 }
 
 export function getBuilderParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [];
+  let parts: BodyPartConstant[] = [MOVE, CARRY, CARRY, WORK];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
+    if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
+      parts.push(MOVE);
+    }
+    partsCost = getPartsEnergy(parts);
+
+    if (BODYPART_COST[CARRY] + partsCost <= spawnEnergy) {
+      parts.push(CARRY);
+    }
+    partsCost = getPartsEnergy(parts);
+
     if (BODYPART_COST[CARRY] + partsCost <= spawnEnergy) {
       parts.push(CARRY);
     }
@@ -45,16 +55,6 @@ export function getBuilderParts(spawn: StructureSpawn, extensions: StructureExte
     }
     partsCost = getPartsEnergy(parts);
 
-    if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
-      parts.push(MOVE);
-    }
-    partsCost = getPartsEnergy(parts);
-
-    if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
-      parts.push(MOVE);
-    }
-    partsCost = getPartsEnergy(parts);
-
     if (spawnEnergy - partsCost <= 49) break;
   }
 
@@ -62,7 +62,7 @@ export function getBuilderParts(spawn: StructureSpawn, extensions: StructureExte
 }
 
 export function getMeleeParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [MOVE];
+  let parts: BodyPartConstant[] = [ATTACK, MOVE];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
@@ -83,7 +83,7 @@ export function getMeleeParts(spawn: StructureSpawn, extensions: StructureExtens
 }
 
 export function getRangerParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [];
+  let parts: BodyPartConstant[] = [RANGED_ATTACK, MOVE];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
@@ -105,12 +105,14 @@ export function getRangerParts(spawn: StructureSpawn, extensions: StructureExten
 
 // TODO: FIX
 export function getHealerParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [];
+  let parts: BodyPartConstant[] = [HEAL, MOVE];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
     if (BODYPART_COST[HEAL] + partsCost <= spawnEnergy) {
       parts.push(HEAL);
+    } else {
+      break;
     }
     partsCost = getPartsEnergy(parts);
 

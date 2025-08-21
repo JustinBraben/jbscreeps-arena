@@ -82,7 +82,7 @@ export function createSwampExtensions(
     if (allySpawn.x === 94) offsetX = extensionRange;
     if (allySpawn.x === 5) offsetX = -extensionRange;
 
-    for (const offsetY of [-1, 0, 1]){
+    for (const offsetY of [-2, -1, 0, 1, 2]){
       const pos: Position = { x: container.x + offsetX, y: container.y + offsetY };
       const existingSite = allyConstructionSites.find(s => allySpawn !== undefined && s.x === pos.x && s.y === pos.y);
       // let outsideSite = null;
