@@ -1,5 +1,5 @@
 import { ConstructionSite, Position, StructureContainer, StructureExtension, StructureRampart, StructureSpawn } from "game/prototypes";
-import { createConstructionSite } from "game/utils";
+import { createConstructionSite, getTicks } from "game/utils";
 
 
 export function planConstructionSites(
@@ -11,15 +11,15 @@ export function planConstructionSites(
 ): void {
   if (allySpawn === null || allySpawn === undefined) return;
 
-  const existingSite1 = allyConstructionSites.find(s => allySpawn !== undefined && s.x === allySpawn.x && s.y === allySpawn.y + 2);
-  if (existingSite1 === undefined){
-    createConstructionSite({x: allySpawn.x, y: allySpawn.y + 2}, StructureExtension).object;
-  }
+  // const existingSite1 = allyConstructionSites.find(s => allySpawn !== undefined && s.x === allySpawn.x && s.y === allySpawn.y + 2);
+  // if (existingSite1 === undefined){
+  //   createConstructionSite({x: allySpawn.x, y: allySpawn.y + 2}, StructureExtension).object;
+  // }
 
-  const existingSite2 = allyConstructionSites.find(s => allySpawn !== undefined && s.x === allySpawn.x && s.y === allySpawn.y - 2);
-  if (existingSite2 === undefined){
-    createConstructionSite({x: allySpawn.x, y: allySpawn.y - 2}, StructureExtension).object;
-  }
+  // const existingSite2 = allyConstructionSites.find(s => allySpawn !== undefined && s.x === allySpawn.x && s.y === allySpawn.y - 2);
+  // if (existingSite2 === undefined){
+  //   createConstructionSite({x: allySpawn.x, y: allySpawn.y - 2}, StructureExtension).object;
+  // }
 
   createInitialSpawnRamparts(allySpawn, allyConstructionSites, allyRamparts);
 
@@ -57,7 +57,7 @@ export function createInitialSpawnRamparts(
       r.x === allySpawn.x && r.y === allySpawn.y
     );
 
-    if (!spawnRampartExists) {
+    if (!spawnRampartExists && getTicks() === 500) {
       createConstructionSite(
         { x: allySpawn.x, y: allySpawn.y },
         StructureRampart
@@ -82,7 +82,7 @@ export function createSwampExtensions(
     if (allySpawn.x === 94) offsetX = extensionRange;
     if (allySpawn.x === 5) offsetX = -extensionRange;
 
-    for (const offsetY of [-2, -1, 0, 1, 2]){
+    for (const offsetY of [-2, -1, 0, 1, 2]) {
       const pos: Position = { x: container.x + offsetX, y: container.y + offsetY };
       const existingSite = allyConstructionSites.find(s => allySpawn !== undefined && s.x === pos.x && s.y === pos.y);
       // let outsideSite = null;

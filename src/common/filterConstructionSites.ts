@@ -39,22 +39,24 @@ export function findConstructionSiteToBuild(
   creep: Creep,
   allySpawn: StructureSpawn,
   allyConstructionSites: ConstructionSite[],
-): ConstructionSite<BuildableStructure> | undefined {
-  // Fallback to building any construction sites
-    return allyConstructionSites
-    .sort((a, b) => {
-      // Prioritize sites near spawn
-      const aDist = allySpawn ? a.getRangeTo(allySpawn) : 100;
-      const bDist = allySpawn ? b.getRangeTo(allySpawn) : 100;
+): ConstructionSite<BuildableStructure> | undefined | null {
+  if (allySpawn) {}
+  return creep.findClosestByRange(allyConstructionSites.filter(site => site.my && site.exists && site.progress < site.progressTotal));
+  // // Fallback to building any construction sites
+  //   return allyConstructionSites
+  //   .sort((a, b) => {
+  //     // Prioritize sites near spawn
+  //     const aDist = allySpawn ? a.getRangeTo(allySpawn) : 100;
+  //     const bDist = allySpawn ? b.getRangeTo(allySpawn) : 100;
 
-      // If both are close to spawn, prioritize by progress
-      if (aDist < 10 && bDist < 10) {
-        return (b.progress / b.progressTotal) - (a.progress / a.progressTotal);
-      }
+  //     // If both are close to spawn, prioritize by progress
+  //     if (aDist < 10 && bDist < 10) {
+  //       return (b.progress / b.progressTotal) - (a.progress / a.progressTotal);
+  //     }
 
-      // Otherwise prioritize by distance
-      if (aDist !== bDist) return aDist - bDist;
-      return a.getRangeTo(creep) - b.getRangeTo(creep);
-    })
-    .find(s => s.exists);
+  //     // Otherwise prioritize by distance
+  //     if (aDist !== bDist) return aDist - bDist;
+  //     return a.getRangeTo(creep) - b.getRangeTo(creep);
+  //   })
+  //   .find(s => s.exists);
 }

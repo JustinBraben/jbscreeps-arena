@@ -31,17 +31,12 @@ export function getHaulerParts(spawn: StructureSpawn, extensions: StructureExten
 }
 
 export function getBuilderParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [MOVE, CARRY, CARRY, WORK];
+  let parts: BodyPartConstant[] = [MOVE, CARRY, WORK];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
     if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
       parts.push(MOVE);
-    }
-    partsCost = getPartsEnergy(parts);
-
-    if (BODYPART_COST[CARRY] + partsCost <= spawnEnergy) {
-      parts.push(CARRY);
     }
     partsCost = getPartsEnergy(parts);
 

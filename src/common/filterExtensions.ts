@@ -6,7 +6,7 @@ export function getMyExtensions(): StructureExtension[] {
 }
 
 export function getMyExtensionsToFill(): StructureExtension[] {
-  return getObjectsByPrototype(StructureExtension).filter(extension => extension.my && extension.hits > 0 && extension.store.energy < 100);
+  return getObjectsByPrototype(StructureExtension).filter(extension => extension.my && extension.hits > 0 && extension.store.energy < 100 && extension.exists);
 }
 
 // Helper function to calculate total available energy for spawning

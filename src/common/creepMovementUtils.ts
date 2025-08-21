@@ -3,9 +3,11 @@ import { searchPath } from "game/path-finder";
 import { Creep, GameObject, Position, StructureSpawn } from "game/prototypes";
 import { getDirection, getRange } from "game/utils";
 
-export function moveWithinRange(creep: Creep, otherPos: Position, idealRange: number): boolean {
+export function moveWithinRange(creep: Creep, otherPos: Position, idealRange: number, ignore?: GameObject[]): boolean {
   if (getRange(creep, otherPos) > idealRange) {
-    const moveResult = creep.moveTo(otherPos);
+    let findPathOpts = {};
+    if (ignore) findPathOpts = { ignore: ignore };
+    const moveResult = creep.moveTo(otherPos, findPathOpts);
     if (moveResult === OK) return true;
   }
 

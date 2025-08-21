@@ -5,12 +5,6 @@ import { DefaultFindPathOptions } from "./constants";
 import { findConstructionSiteToBuild } from "./filterConstructionSites";
 import { getCreepsWithinRangeOfCreep } from "./filterCreeps";
 
-// export function moveWithinRange(creep: Creep, otherPos: Position, idealRange: number): void {
-//   if (getRange(creep, otherPos) > idealRange) {
-//     creep.moveTo(otherPos);
-//   }
-// }
-
 export function moveWithinRangeOfContainer(creep: Creep, targetContainer: StructureContainer): void {
   moveWithinRange(creep, targetContainer, 1);
 }
@@ -102,47 +96,10 @@ export function tryBuildConstructionSite(
 
   let targetWithdraw: Resource | StructureContainer | null | undefined = creep.findInRange(droppedEnergy, 1).find(c => c);
   if (!targetWithdraw) targetWithdraw = creep.findClosestByPath(allySpawnContainers);
-  if (!targetWithdraw) targetWithdraw = creep.findClosestByPath(swampContainers);
-  if (!targetWithdraw) targetWithdraw = creep.findClosestByPath(containers);
+  if (!targetWithdraw || targetWithdraw) targetWithdraw = creep.findClosestByRange(swampContainers);
+  if (!targetWithdraw) targetWithdraw = creep.findClosestByRange(containers);
+  if (!targetWithdraw) targetWithdraw = creep.findClosestByRange(droppedEnergy);
   if (!targetWithdraw) return res;
-
-  // let targetTransfer: StructureSpawn | StructureExtension = mySpawn;
-  // const pathToMySpawn = hauler.findPathTo(mySpawn);
-  // const targetExtension = hauler.findClosestByPath(myExtensionsToFill);
-  // let pathToMyExtension: Position[] | null = null;
-  // if (targetExtension) pathToMyExtension = hauler.findPathTo(targetExtension);
-  // if (targetExtension && pathToMyExtension && pathToMyExtension.length < pathToMySpawn.length) targetTransfer = targetExtension;
-  // if (targetExtension && targetExtension.store.energy !== 100 && mySpawn.store.energy === 1000) targetTransfer = targetExtension;
-
-  const site = findConstructionSiteToBuild(creep, allySpawn, allyConstructionSites);
-
-  // if (hauler.store.energy === 0) {
-  //   if (hauler.getRangeTo(targetWithdraw) > 1) {
-
-  //     moveWithinRange(hauler, targetWithdraw, 1);
-
-  //     if (targetWithdraw instanceof(Resource) && hauler.getRangeTo(targetWithdraw) < 2) {
-  //       hauler.pickup(targetWithdraw);
-  //     } else if (targetWithdraw instanceof(StructureContainer)) {
-  //       const withdrawResult = tryWithdrawContainer(hauler, targetWithdraw);
-  //       if (withdrawResult === OK) {
-  //         // hauler.drop(RESOURCE_ENERGY);
-  //       }
-  //     }
-
-  //   } else if (hauler.getRangeTo(targetWithdraw) < 2) {
-
-  //     if (targetWithdraw instanceof(Resource)) {
-  //       hauler.pickup(targetWithdraw);
-  //     } else if (targetWithdraw instanceof(StructureContainer)) {
-  //       const withdrawResult = tryWithdrawContainer(hauler, targetWithdraw);
-  //       if (withdrawResult === OK) {
-  //         // hauler.drop(RESOURCE_ENERGY);
-  //       }
-  //     }
-  //   }
-
-  // }
 
   if (creep.store.energy === 0) {
     if (creep.getRangeTo(targetWithdraw) > 1) {
@@ -172,33 +129,33 @@ export function tryBuildConstructionSite(
     return res;
   } else {
 
+    const site = findConstructionSiteToBuild(creep, allySpawn, allyConstructionSites);
+
     if (site) {
-      if (creep.getRangeTo(site) > 3) {
+      if (creep.getRangeTo(site) >= 3) {
         creep.drop(RESOURCE_ENERGY);
+
         res = res || moveWithinRange(creep, site, 3);
-      } else if (creep.getRangeTo(site) < 4) {
+      } else if (creep.getRangeTo(site) < 3) {
+        if (creep.x === site.x && creep.y === site.y) res = res || moveWithinRange(creep, allySpawn, 3);
         const buildResult = creep.build(site);
         res = true;
         console.log(`Builder ${creep.id}, buildOtherConstructionSites, build result: ${buildResult}`);
+
+        // const existingSite = allyConstructionSites.find(s => s.x === creep.x && s.y === creep.y);
+        // // let outsideSite = null;
+        // if (existingSite === undefined) {
+        //   // outsideSite = createConstructionSite(pos, StructureExtension).object;
+        //   const createSiteResult = createConstructionSite({ x: creep.x, y: creep.y }, StructureRampart);
+        //   if (createSiteResult.object) {
+        //     // console.log(`Site created: ${createSiteResult.object.id}`);
+        //   } else if (createSiteResult.error) {
+        //     console.log(`Site creation failed with error: ${createSiteResult.error}`);
+        //   }
+        // }
       }
     }
   }
-
-  // if (site) {
-
-  //   if (creep.x === site.x && creep.y === site.y) {
-  //     res = res || moveWithinRange(creep, allySpawn, 1);
-  //   }
-
-  //   res = res || moveWithinRange(creep, site, 2);
-
-  //   if (creep.getRangeTo(site) < 4) {
-  //     const buildResult = creep.build(site);
-  //     res = true;
-  //     console.log(`Builder ${creep.id}, buildOtherConstructionSites, build result: ${buildResult}`);
-  //     // if (buildResult == ERR_INVALID_TARGET) site.remove();
-  //   }
-  // }
 
   return res;
 }
