@@ -11,17 +11,15 @@ export function planConstructionSites(
 ): void {
   if (allySpawn === null || allySpawn === undefined) return;
 
-  // const existingSite1 = constructionSites.find(s => allySpawn !== undefined && s.x === allySpawn.x && s.y === allySpawn.y + 2);
-  // let constructSite1 = null;
-  // if (existingSite1 === undefined){
-  //   constructSite1 = createConstructionSite({x: allySpawn.x, y: allySpawn.y + 2}, StructureExtension).object;
-  // }
+  const existingSite1 = allyConstructionSites.find(s => allySpawn !== undefined && s.x === allySpawn.x && s.y === allySpawn.y + 2);
+  if (existingSite1 === undefined){
+    createConstructionSite({x: allySpawn.x, y: allySpawn.y + 2}, StructureExtension).object;
+  }
 
-  // const existingSite2 = constructionSites.find(s => allySpawn !== undefined && s.x === allySpawn.x && s.y === allySpawn.y - 2);
-  // let constructSite2 = null;
-  // if (existingSite2 === undefined){
-  //   constructSite2 = createConstructionSite({x: allySpawn.x, y: allySpawn.y - 2}, StructureExtension).object;
-  // }
+  const existingSite2 = allyConstructionSites.find(s => allySpawn !== undefined && s.x === allySpawn.x && s.y === allySpawn.y - 2);
+  if (existingSite2 === undefined){
+    createConstructionSite({x: allySpawn.x, y: allySpawn.y - 2}, StructureExtension).object;
+  }
 
   createInitialSpawnRamparts(allySpawn, allyConstructionSites, allyRamparts);
 
@@ -43,7 +41,7 @@ export function planConstructionSites(
   // they actually get created
   createSwampExtensions(allySpawn, allyConstructionSites, swampContainers, extensionRange);
 
-  planRemoveExtensionConstructionSites(allyConstructionSites, swampContainers, extensionRange);
+  planRemoveExtensionConstructionSites(allySpawn, allyConstructionSites, swampContainers, extensionRange);
 }
 
 export function createInitialSpawnRamparts(
@@ -106,6 +104,7 @@ export function createSwampExtensions(
 
 // Remove ConstructionSites
 export function planRemoveExtensionConstructionSites(
+  allySpawn: StructureSpawn,
   allyConstructionSites: ConstructionSite[],
   swampContainers: StructureContainer[],
   extensionRange: number,
@@ -116,7 +115,7 @@ export function planRemoveExtensionConstructionSites(
     if (site.structure instanceof(StructureRampart)) continue;
 
     const containerNearSite = swampContainers.find(c => c.getRangeTo(site) <= extensionRange);
-    if (!containerNearSite) {
+    if (!containerNearSite && allySpawn.getRangeTo(site) > 7) {
       site.remove();
     }
   }
