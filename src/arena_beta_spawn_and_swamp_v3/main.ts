@@ -126,7 +126,7 @@ function runHauler(hauler: Creep, idx?: number): void {
   const closestSpawnContainer = hauler.findClosestByPath(mySpawnContainers);
   const closestSwampContainer = hauler.findClosestByPath(swampContainers);
   const closestContainer = hauler.findClosestByPath(containers);
-  const closestDroppedEnergy = hauler.findClosestByRange(droppedEnergy.filter(e => e.amount > 500));
+  const closestDroppedEnergy = hauler.findClosestByRange(droppedEnergy.filter(e => e.amount > 1000));
   if (!targetWithdraw && closestSpawnContainer && idx && idx % 2 === 1) targetWithdraw = closestSpawnContainer;
   if (!targetWithdraw && closestSwampContainer && idx && idx % 2 === 0) targetWithdraw = closestSwampContainer;
   if (!targetWithdraw && closestContainer) targetWithdraw = closestContainer;
@@ -188,13 +188,13 @@ function runBuilder(creep: Creep): void {
     return;
   }
 
-  // Try fill up empty extensions
+  if (mySpawnContainers.filter(c => c.store.energy > 0)){
+    runHauler(creep);
+  }
 
   // Try and build unfinished construction sites
   // Phase 1: Build spawn rampart if it doesn't exist
   tryBuildSpawnRamparts(creep, mySpawn, myConstructionSites);
-
-  // tryTransferSwampExtension(creep, mySpawn, myExtensionsToFill, swampContainers);
 
   if (myExtensionsToFill.length > 1) {
     runHauler(creep);
@@ -210,7 +210,12 @@ function runBuilder(creep: Creep): void {
 function runMelee(creep: Creep): void {
   let res;
 
-  const closestWall = creep.findClosestByRange(walls);
+  const closestWall = creep.findClosestByRange(walls.filter(c =>
+        c.id == "6"  ||
+        c.id == "11" ||
+        c.id == "21" ||
+        c.id == "26"
+  ));
   let wallRange = null;
   if (closestWall) wallRange = creep.getRangeTo(closestWall!);
   const closestEnemyToCreep = creep.findClosestByRange(enemyCreeps);
@@ -347,6 +352,7 @@ function runRanger(creep: Creep): void {
   const nearbyAllies = myCreeps.filter(a => a.getRangeTo(creep) < 3);
   const totalEnemyThreats = nearbyEnemyMelees.length + nearbyEnemyRangers.length;
   const targets = enemyCreeps.sort((a, b) => a.getRangeTo(creep) - b.getRangeTo(creep));
+  const closestAllyBuilder = creep.findClosestByRange(myBuilders);
   const closestEnemyToCreep = creep.findClosestByRange(enemyCreeps);
   const closestEnemyToSpawn = mySpawn.findClosestByRange(enemyMelees) || mySpawn.findClosestByRange(enemyRangers) || mySpawn.findClosestByRange(enemyHealers) || mySpawn.findClosestByRange(enemyCreeps);
   const closestEnemyToSpawnRange = mySpawn.getRangeTo(closestEnemyToSpawn!);
@@ -363,7 +369,11 @@ function runRanger(creep: Creep): void {
     // flee(creep, mySpawn, nearbyEnemyMelees, 8);
     // if (target && creep.getRangeTo(target) <= 5)
     if (attTarget && creep.getRangeTo(attTarget) <= 3) creep.rangedAttack(attTarget);
-    moveWithinRange(creep, mySpawn, 3);
+    if (closestAllyBuilder) {
+      moveWithinRange(creep, closestAllyBuilder, 2);
+    } else {
+      moveWithinRange(creep, mySpawn, 3);
+    }
     return;
   }
 
@@ -380,7 +390,12 @@ function runRanger(creep: Creep): void {
       const res = creep.rangedAttack(attTarget);
       console.log(`Melee attack result: ${res}`);
     }
-    flee(creep, mySpawn, nearbyEnemyMelees, 8);
+    // flee(creep, mySpawn, nearbyEnemyMelees, 8);
+    if (closestAllyBuilder) {
+      moveWithinRange(creep, closestAllyBuilder, 2);
+    } else {
+      moveWithinRange(creep, mySpawn, 3);
+    }
     return;
   }
 
@@ -446,8 +461,7 @@ function handleSpawning(): void {
       } else if(result.error) {
         // console.log(`Failed to spawn Melee ${result.error}`);
       }
-    }
-    else if (myMelees.length <= enemyMelees.length) {
+    } else if (myMelees.length < 2) {
       const parts = getMeleeParts(mySpawn, myExtensions);
       const result = mySpawn.spawnCreep(parts);
       // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
@@ -456,7 +470,7 @@ function handleSpawning(): void {
       } else if(result.error) {
         // console.log(`Failed to spawn Melee ${result.error}`);
       }
-    } else if (myRangers.length <= enemyRangers.length) {
+    } else if (myRangers.length < 2) {
       const parts = getRangerParts(mySpawn, myExtensions);
       const result = mySpawn.spawnCreep(parts);
       // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
@@ -465,7 +479,8 @@ function handleSpawning(): void {
       } else if(result.error) {
         // console.log(`Failed to spawn Melee ${result.error}`);
       }
-    } else if (myHealers.length <= enemyHealers.length) {
+    }
+    else if (myHealers.length < myMelees.length + myRangers.length) {
       const parts = getHealerParts(mySpawn, myExtensions);
       const result = mySpawn.spawnCreep(parts);
       // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
@@ -474,7 +489,28 @@ function handleSpawning(): void {
       } else if(result.error) {
         // console.log(`Failed to spawn Melee ${result.error}`);
       }
-    } else if (myBuilders.length <= enemyBuilders.length) {
+    }
+    else if (myMelees.length < enemyMelees.length) {
+      const parts = getMeleeParts(mySpawn, myExtensions);
+      const result = mySpawn.spawnCreep(parts);
+      // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
+      if (result.object) {
+        console.log(`Spawning Melee: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
+      } else if(result.error) {
+        // console.log(`Failed to spawn Melee ${result.error}`);
+      }
+    }
+    else if (myRangers.length < enemyRangers.length) {
+      const parts = getRangerParts(mySpawn, myExtensions);
+      const result = mySpawn.spawnCreep(parts);
+      // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
+      if (result.object) {
+        console.log(`Spawning Melee: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
+      } else if(result.error) {
+        // console.log(`Failed to spawn Melee ${result.error}`);
+      }
+    }
+    else if (myBuilders.length <= enemyBuilders.length) {
       const parts = getBuilderParts(mySpawn, myExtensions);
       const result = mySpawn.spawnCreep(parts);
       // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);

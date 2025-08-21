@@ -53,19 +53,16 @@ export function getBuilderParts(spawn: StructureSpawn, extensions: StructureExte
     if (spawnEnergy - partsCost <= 49) break;
   }
 
+  parts.sort((a, b) => BODYPART_COST[a] - BODYPART_COST[b]);
+
   return parts;
 }
 
 export function getMeleeParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [ATTACK, MOVE];
+  let parts: BodyPartConstant[] = [MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
-    if (BODYPART_COST[ATTACK] + partsCost <= spawnEnergy) {
-      parts.push(ATTACK);
-    }
-    partsCost = getPartsEnergy(parts);
-
     if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
       parts.push(MOVE);
     }
@@ -73,20 +70,17 @@ export function getMeleeParts(spawn: StructureSpawn, extensions: StructureExtens
 
     if (spawnEnergy - partsCost <= 49) break;
   }
+
+  parts.sort((a, b) => BODYPART_COST[a] - BODYPART_COST[b]);
 
   return parts;
 }
 
 export function getRangerParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [RANGED_ATTACK, MOVE];
+  let parts: BodyPartConstant[] = [MOVE, MOVE, RANGED_ATTACK, RANGED_ATTACK];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
-    if (BODYPART_COST[RANGED_ATTACK] + partsCost <= spawnEnergy) {
-      parts.push(RANGED_ATTACK);
-    }
-    partsCost = getPartsEnergy(parts);
-
     if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
       parts.push(MOVE);
     }
@@ -94,6 +88,8 @@ export function getRangerParts(spawn: StructureSpawn, extensions: StructureExten
 
     if (spawnEnergy - partsCost <= 49) break;
   }
+
+  parts.sort((a, b) => BODYPART_COST[a] - BODYPART_COST[b]);
 
   return parts;
 }
@@ -118,6 +114,8 @@ export function getHealerParts(spawn: StructureSpawn, extensions: StructureExten
 
     if (spawnEnergy - partsCost <= 49) break;
   }
+
+  parts.sort((a, b) => BODYPART_COST[a] - BODYPART_COST[b]);
 
   return parts;
 }
