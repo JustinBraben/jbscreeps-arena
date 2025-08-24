@@ -4,6 +4,7 @@ import { /*ERR_INVALID_TARGET,*/ CreepWithdrawResult, ERR_NOT_IN_RANGE, OK, RESO
 import { DefaultFindPathOptions } from "./constants";
 import { findConstructionSiteToBuild } from "./filterConstructionSites";
 import { getCreepsWithinRangeOfCreep } from "./filterCreeps";
+import { createConstructionSite } from "game/utils";
 
 export function moveWithinRangeOfContainer(creep: Creep, targetContainer: StructureContainer): void {
   moveWithinRange(creep, targetContainer, 1);
@@ -92,11 +93,13 @@ export function tryBuildConstructionSite(
   containers: StructureContainer[],
   droppedEnergy: Resource[],
 ): boolean {
+  if (allySpawnContainers) {}
   let res = false;
 
   let targetWithdraw: Resource | StructureContainer | null | undefined = creep.findInRange(droppedEnergy, 1).find(c => c);
-  if (!targetWithdraw) targetWithdraw = creep.findClosestByPath(allySpawnContainers);
-  if (!targetWithdraw || targetWithdraw) targetWithdraw = creep.findClosestByRange(swampContainers);
+  // if (!targetWithdraw) targetWithdraw = creep.findClosestByPath(allySpawnContainers);
+  // if (!targetWithdraw || targetWithdraw) targetWithdraw = creep.findClosestByRange(swampContainers);
+  if (!targetWithdraw) targetWithdraw = creep.findClosestByRange(swampContainers);
   if (!targetWithdraw) targetWithdraw = creep.findClosestByRange(containers);
   if (!targetWithdraw) targetWithdraw = creep.findClosestByRange(droppedEnergy);
   if (!targetWithdraw) return res;
@@ -132,12 +135,17 @@ export function tryBuildConstructionSite(
     const site = findConstructionSiteToBuild(creep, allySpawn, allyConstructionSites);
 
     if (site) {
-      if (creep.getRangeTo(site) >= 3) {
+      if (creep.getRangeTo(targetWithdraw) > 1) {
+        creep.drop(RESOURCE_ENERGY);
+
+        res = res || moveWithinRange(creep, targetWithdraw, 1);
+      }
+      else if (creep.getRangeTo(site) >= 3) {
         creep.drop(RESOURCE_ENERGY);
 
         res = res || moveWithinRange(creep, site, 3);
       } else if (creep.getRangeTo(site) < 3) {
-        if (creep.x === site.x && creep.y === site.y) res = res || moveWithinRange(creep, allySpawn, 3);
+        if (creep.x === site.x && creep.y === site.y && !(site.structure instanceof(StructureRampart))) res = res || moveWithinRange(creep, allySpawn, 3);
         const buildResult = creep.build(site);
         res = true;
         console.log(`Builder ${creep.id}, buildOtherConstructionSites, build result: ${buildResult}`);
@@ -158,4 +166,46 @@ export function tryBuildConstructionSite(
   }
 
   return res;
+}
+
+// If swamp container nearby that will decay
+// withdraw from it and drop energy
+// Returns true if there was a swampcontainer nearby that it withdrew from successfully
+// otherwise returns false
+export function tryDrainSwampContainer(
+  creep: Creep,
+  allyConstructionSites: ConstructionSite[],
+  swampContainers: StructureContainer[],
+): boolean {
+  const closestSwampContainer = creep.findClosestByRange(swampContainers.filter(container => {
+    return container.store.energy > 0 && container.ticksToDecay && container.ticksToDecay > 0
+  }));
+  const creepStore = creep.store;
+  const creepStoreFreeCapacity = creepStore.getFreeCapacity(RESOURCE_ENERGY);
+  if (closestSwampContainer && creepStore && creepStoreFreeCapacity && creepStoreFreeCapacity > 0) {
+    const rangeToClosestSwampContainer = creep.getRangeTo(closestSwampContainer);
+    if (rangeToClosestSwampContainer < 2) {
+      const existingRampartSite = allyConstructionSites.find(site => site.x === creep.x && site.y === creep.y && site.structure instanceof(StructureRampart));
+      if (!existingRampartSite) {
+        createConstructionSite({x: creep.x, y: creep.y}, StructureRampart);
+      }
+      const res = creep.withdraw(closestSwampContainer, RESOURCE_ENERGY);
+      if (res === OK) return true;
+    }
+  }
+
+  return false;
+}
+
+export function tryDropNearSwampContainer(
+  creep: Creep,
+  droppedEnergy: Resource[],
+): boolean {
+  const closestDroppedEnergy = creep.findClosestByRange(droppedEnergy.filter(energy => energy.amount > 1000));
+  if (!closestDroppedEnergy && creep.store.energy > 0) {
+    creep.drop(RESOURCE_ENERGY);
+    return true;
+  }
+
+  return false;
 }

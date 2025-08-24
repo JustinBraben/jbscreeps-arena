@@ -5,7 +5,7 @@ import { getDirection, getRange } from "game/utils";
 
 export function moveWithinRange(creep: Creep, otherPos: Position, idealRange: number, ignore?: GameObject[]): boolean {
   if (getRange(creep, otherPos) > idealRange) {
-    let findPathOpts = {};
+    let findPathOpts = undefined;
     if (ignore) findPathOpts = { ignore: ignore };
     const moveResult = creep.moveTo(otherPos, findPathOpts);
     if (moveResult === OK) return true;

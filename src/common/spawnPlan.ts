@@ -27,19 +27,19 @@ export function getHaulerParts(spawn: StructureSpawn, extensions: StructureExten
     if (spawnEnergy - partsCost <= 49) break;
   }
 
+  parts.reverse();
+
   return parts;
 }
 
 export function getBuilderParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [MOVE, CARRY, WORK];
+  let parts: BodyPartConstant[] = [CARRY, WORK, MOVE, MOVE];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
-    if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
-      parts.push(MOVE);
+    if (BODYPART_COST[MOVE] + BODYPART_COST[MOVE] + BODYPART_COST[CARRY] + BODYPART_COST[WORK] + partsCost > spawnEnergy) {
+      break;
     }
-    partsCost = getPartsEnergy(parts);
-
     if (BODYPART_COST[CARRY] + partsCost <= spawnEnergy) {
       parts.push(CARRY);
     }
@@ -47,6 +47,16 @@ export function getBuilderParts(spawn: StructureSpawn, extensions: StructureExte
 
     if (BODYPART_COST[WORK] + partsCost <= spawnEnergy) {
       parts.push(WORK);
+    }
+    partsCost = getPartsEnergy(parts);
+
+    if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
+      parts.push(MOVE);
+    }
+    partsCost = getPartsEnergy(parts);
+
+    if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
+      parts.push(MOVE);
     }
     partsCost = getPartsEnergy(parts);
 
@@ -59,12 +69,26 @@ export function getBuilderParts(spawn: StructureSpawn, extensions: StructureExte
 }
 
 export function getMeleeParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK];
+  let parts: BodyPartConstant[] = [MOVE, MOVE, ATTACK];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
+    if (BODYPART_COST[MOVE] + BODYPART_COST[MOVE] + BODYPART_COST[ATTACK] + partsCost > spawnEnergy) {
+      break;
+    }
+
     if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
       parts.push(MOVE);
+    }
+    partsCost = getPartsEnergy(parts);
+
+    if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
+      parts.push(MOVE);
+    }
+    partsCost = getPartsEnergy(parts);
+
+    if (BODYPART_COST[ATTACK] + partsCost <= spawnEnergy) {
+      parts.push(ATTACK);
     }
     partsCost = getPartsEnergy(parts);
 
