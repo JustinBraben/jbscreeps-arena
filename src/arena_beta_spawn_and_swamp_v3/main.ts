@@ -5,10 +5,11 @@ import { getBuilders, getEnemyCreeps, getHaulers, getHealers, getMelees, getMyCr
 import { getMyExtensions, getMyExtensionsToFill, getTotalSpawnEnergy } from "common/filterExtensions";
 import { getContainers, getContainersInSwamp, getContainersNearSpawn } from "common/filterContainers";
 import { flee, moveWithinRange } from "common/creepMovementUtils";
-import { fleeWithinRange, /*tryBuildSpawnRamparts,*/ /*tryTransferSwampExtension,*/ tryWithdrawContainer } from "common/creepBehavior";
+import { /*fleeWithinRange,*/ /*tryBuildSpawnRamparts,*/ /*tryTransferSwampExtension,*/ tryWithdrawContainer } from "common/creepBehavior";
 import { planConstructionSites, planExtensions, planRamparts } from "common/constructionPlan";
 import { findConstructionSiteToBuild, getConstructionSites, getMyConstructionSites } from "common/filterConstructionSites";
 import { getBuilderParts, getHaulerParts, getHealerParts, getMeleeParts, getRangerParts } from "common/spawnPlan";
+import { findClosestAvailableRampart } from "common/filterRamparts";
 // import { DefaultFindPathOptions } from "common/constants";
 
 // Global variables for game state
@@ -114,55 +115,73 @@ function updateGameState(): void {
   // Consider only update containers if we have Haulers or Builders
 }
 
-function runHauler(hauler: Creep, idx?: number): void {
-  if (!hauler.body.find(p => p.type === MOVE && p.hits > 0)) return;
+function runHauler(creep: Creep, idx?: number): void {
+  if (!creep.body.find(p => p.type === MOVE && p.hits > 0)) return;
   // Stay away from enemies
-  const nearbyAllies = myCreeps.filter(a => a.getRangeTo(hauler) < 3);
-  if (fleeWithinRange(hauler, mySpawn, enemyCreeps, nearbyAllies.length, 3)) {
-    hauler.drop(RESOURCE_ENERGY);
+  const nearbyMelees = creep.findInRange(enemyMelees, 10);
+  const nearbyRangers = creep.findInRange(enemyRangers, 10);
+  const totalNearbyThreats = nearbyMelees.length + nearbyRangers.length;
+  // const closestRamparts = creep.findClosestByRange(myRamparts);
+
+  if (totalNearbyThreats > 0) {
+    const closestAvailableRampart = findClosestAvailableRampart(creep, myRamparts, myCreeps);
+
+    if (closestAvailableRampart) {
+      // If not already on the rampart, move to it
+      if (creep.x !== closestAvailableRampart.x || creep.y !== closestAvailableRampart.y) {
+        moveWithinRange(creep, closestAvailableRampart, 0, undefined);
+        return;
+      }
+      // If already on rampart, can continue with building logic
+    } else {
+      // No available ramparts, use existing flee logic
+      flee(creep, mySpawn, [...nearbyMelees, ...nearbyRangers], 5);
+      return;
+    }
+
     return;
   }
 
-  let targetWithdraw: Resource | StructureContainer | null | undefined = hauler.findInRange(droppedEnergy, 1).find(c => c);
-  const closestSpawnContainer = hauler.findClosestByPath(mySpawnContainers);
-  const closestSwampContainer = hauler.findClosestByPath(swampContainers);
-  const closestContainer = hauler.findClosestByPath(containers);
-  const closestDroppedEnergy = hauler.findClosestByRange(droppedEnergy.filter(e => e.amount > 200));
+  let targetWithdraw: Resource | StructureContainer | null | undefined = creep.findInRange(droppedEnergy, 1).find(c => c);
+  const closestSpawnContainer = creep.findClosestByRange(mySpawnContainers);
+  const closestSwampContainer = creep.findClosestByRange(swampContainers);
+  const closestContainer = creep.findClosestByRange(containers);
+  const closestDroppedEnergy = creep.findClosestByPath(droppedEnergy.filter(e => e.amount > 150));
   if (!targetWithdraw && closestSpawnContainer && idx && idx % 2 === 1) targetWithdraw = closestSpawnContainer;
   if (!targetWithdraw && closestSwampContainer && idx && idx % 2 === 0) targetWithdraw = closestSwampContainer;
   if (!targetWithdraw && closestContainer) targetWithdraw = closestContainer;
-  if (closestDroppedEnergy && hauler.getRangeTo(closestDroppedEnergy) < 15) { targetWithdraw = closestDroppedEnergy; }
+  if (closestDroppedEnergy && creep.getRangeTo(closestDroppedEnergy) < 15) { targetWithdraw = closestDroppedEnergy; }
   if (!targetWithdraw) return;
 
   let targetTransfer: StructureSpawn | StructureExtension = mySpawn;
-  const pathToMySpawn = hauler.findPathTo(mySpawn);
-  let targetExtension = hauler.findClosestByPath(myExtensionsToFill.filter(e => e.my && e.store.energy < 100 && e.exists));
+  const pathToMySpawn = creep.findPathTo(mySpawn);
+  let targetExtension = creep.findClosestByRange(myExtensionsToFill.filter(e => e.my && e.store.energy < 100 && e.exists));
   let pathToMyExtension: Position[] | null = null;
-  if (targetExtension) pathToMyExtension = hauler.findPathTo(targetExtension);
+  if (targetExtension) pathToMyExtension = creep.findPathTo(targetExtension);
   if (targetExtension && pathToMyExtension && pathToMyExtension.length < pathToMySpawn.length) targetTransfer = targetExtension;
   if (targetExtension && targetExtension.store.energy < 100 && mySpawn.store.energy === 1000) targetTransfer = targetExtension;
   if (!targetTransfer) targetTransfer = mySpawn;
 
-  if (hauler.store.energy === 0) {
-    if (hauler.getRangeTo(targetWithdraw) > 1) {
+  if (creep.store.energy === 0) {
+    if (creep.getRangeTo(targetWithdraw) > 1) {
 
-      moveWithinRange(hauler, targetWithdraw, 1, /*myExtensions*/);
+      moveWithinRange(creep, targetWithdraw, 1, undefined);
 
-      if (targetWithdraw instanceof(Resource) && hauler.getRangeTo(targetWithdraw) < 2) {
-        hauler.pickup(targetWithdraw);
+      if (targetWithdraw instanceof(Resource) && creep.getRangeTo(targetWithdraw) < 2) {
+        creep.pickup(targetWithdraw);
       } else if (targetWithdraw instanceof(StructureContainer)) {
-        const withdrawResult = tryWithdrawContainer(hauler, targetWithdraw);
+        const withdrawResult = tryWithdrawContainer(creep, targetWithdraw);
         if (withdrawResult === OK) {
           // hauler.drop(RESOURCE_ENERGY);
         }
       }
 
-    } else if (hauler.getRangeTo(targetWithdraw) < 2) {
+    } else if (creep.getRangeTo(targetWithdraw) < 2) {
 
       if (targetWithdraw instanceof(Resource)) {
-        hauler.pickup(targetWithdraw);
+        creep.pickup(targetWithdraw);
       } else if (targetWithdraw instanceof(StructureContainer)) {
-        const withdrawResult = tryWithdrawContainer(hauler, targetWithdraw);
+        const withdrawResult = tryWithdrawContainer(creep, targetWithdraw);
         if (withdrawResult === OK) {
           // hauler.drop(RESOURCE_ENERGY);
         }
@@ -171,16 +190,17 @@ function runHauler(hauler: Creep, idx?: number): void {
 
   } else {
 
-    if (targetTransfer.store.energy !== 100 && hauler.getRangeTo(targetTransfer) < 2) {
-      const transferResult = hauler.transfer(targetTransfer, RESOURCE_ENERGY);
+    if (targetTransfer.store.energy !== 100 && creep.getRangeTo(targetTransfer) < 2) {
+      const transferResult = creep.transfer(targetTransfer, RESOURCE_ENERGY);
       if (transferResult !== OK) {
-        moveWithinRange(hauler, mySpawn, 1, undefined);
+        moveWithinRange(creep, mySpawn, 1, undefined);
       } else {
-        moveWithinRange(hauler, targetWithdraw, 1, undefined);
+        moveWithinRange(creep, targetWithdraw, 1, undefined);
       }
+      myExtensionsToFill = getMyExtensionsToFill();
     } else {
-      hauler.drop(RESOURCE_ENERGY);
-      moveWithinRange(hauler, targetTransfer, 1, undefined);
+      creep.drop(RESOURCE_ENERGY);
+      moveWithinRange(creep, targetTransfer, 1, undefined);
     }
 
   }
@@ -188,43 +208,72 @@ function runHauler(hauler: Creep, idx?: number): void {
 
 function runBuilder(creep: Creep): void {
   // Stay away from enemies
-  const nearbyMelees = creep.findInRange(enemyMelees, 5);
-  const nearbyRangers = creep.findInRange(enemyRangers, 5);
+  const nearbyMelees = creep.findInRange(enemyMelees, 10);
+  const nearbyRangers = creep.findInRange(enemyRangers, 10);
   const totalNearbyThreats = nearbyMelees.length + nearbyRangers.length;
   const closestRamparts = creep.findClosestByRange(myRamparts);
-  if (totalNearbyThreats > 0 && closestRamparts && creep.x !== closestRamparts.x && creep.y !== closestRamparts.y) {
-    // moveWithinRange(creep, closestRamparts, 0);
-    // // if (creep.x === closestRamparts.x && creep.y === closestRamparts.y) {
-    // //   const existingRampartSite = myConstructionSites.find(site => site.x === creep.x + 1 && site.y === creep.y + 1 && site.structure instanceof(StructureRampart));
-    // //   if (!existingRampartSite) {
-    // //     const createSiteResult = createConstructionSite({x: creep.x + 1, y: creep.y + 1}, StructureRampart);
-    // //     if (createSiteResult.object) {
-    // //         console.log(`Site created: ${createSiteResult.object.id}`);
-    // //       } else if (createSiteResult.error) {
-    // //         console.log(`Site creation failed with error: ${createSiteResult.error}`);
-    // //       }
-    // //   }
-    // // }
+  droppedEnergy = getObjectsByPrototype(Resource).filter(r => r.resourceType === RESOURCE_ENERGY);
+  const closestSwampContainer = creep.findClosestByPath(swampContainers.filter(container => container.store.energy > 0));
+  const closestDroppedEnergy = creep.findClosestByRange(droppedEnergy.filter(energy => energy.amount > 0));
 
-    // const site = findConstructionSiteToBuild(creep, mySpawn, myConstructionSites);
-    // if (site && creep.getRangeTo(site) < 3) {
-    //   // if (creep.x === site.x && creep.y === site.y && !(site.structure instanceof(StructureRampart))) moveWithinRange(creep, mySpawn, 3);
-    //   creep.build(site);
+  if (totalNearbyThreats > creep.findInRange(myCreeps, 10).length) {
+    // const closestAvailableRampart = findClosestAvailableRampart(creep, myRamparts, myCreeps);
+
+    // if (closestAvailableRampart) {
+    //   // If not already on the rampart, move to it
+    //   if (creep.x !== closestAvailableRampart.x || creep.y !== closestAvailableRampart.y) {
+    //     moveWithinRange(creep, closestAvailableRampart, 0);
+    //     return;
+    //   }
+    //   // If already on rampart, can continue with building logic
+    // } else {
+    //   // No available ramparts, use existing flee logic
+    //   flee(creep, mySpawn, [...nearbyMelees, ...nearbyRangers], 5);
+    //   return;
     // }
+
     // return;
   }
 
-  if (myExtensionsToFill.length > 1) {
-    runHauler(creep);
+  if (myExtensions.length > 9) {
+    const closestAllyRanger = enemySpawn.findClosestByRange(myRangers);
+    if (closestAllyRanger) {
+      planRamparts(closestAllyRanger, myConstructionSites);
+    }
+
+    if (creep.store.energy === 0) {
+      if (closestSwampContainer) {
+        const rangeToSwampContainer = creep.getRangeTo(closestSwampContainer);
+        if (rangeToSwampContainer < 2) {
+          creep.withdraw(closestSwampContainer, RESOURCE_ENERGY);
+          const site = findConstructionSiteToBuild(creep, mySpawn, myConstructionSites);
+          if (site && creep.getRangeTo(site) >= 3) {
+            moveWithinRange(creep, site, 3);
+            // if (creep.x === site.x && creep.y === site.y && !(site.structure instanceof(StructureRampart))) moveWithinRange(creep, mySpawn, 3);
+            // creep.build(site);
+          }
+        } else if (rangeToSwampContainer > 1) {
+          moveWithinRange(creep, closestSwampContainer, 1);
+          if (rangeToSwampContainer < 2) {
+            creep.withdraw(closestSwampContainer, RESOURCE_ENERGY);
+          }
+        }
+      }
+    } else {
+      const site = creep.findClosestByRange(myConstructionSites.filter(site => site.my && site.exists && site.progress < site.progressTotal && site.structure instanceof(StructureRampart)));
+      if (site && creep.getRangeTo(site) < 3) {
+        if (creep.x === site.x && creep.y === site.y && !(site.structure instanceof(StructureRampart))) moveWithinRange(creep, mySpawn, 3);
+        creep.build(site);
+      }
+    }
+
     return;
   }
 
-  droppedEnergy = getObjectsByPrototype(Resource).filter(r => r.resourceType === RESOURCE_ENERGY);
-  // const withdrewFromSwampContainer = tryDrainSwampContainer(creep, myConstructionSites, swampContainers);
-  // const dropResult = tryDropNearSwampContainer(creep, droppedEnergy);
-
-  const closestSwampContainer = creep.findClosestByPath(swampContainers.filter(container => container.store.energy > 0));
-  const closestDroppedEnergy = creep.findClosestByRange(droppedEnergy.filter(energy => energy.amount > 0));
+  // if (myExtensionsToFill.length > 5) {
+  //   runHauler(creep);
+  //   return;
+  // }
 
   if (closestDroppedEnergy && closestRamparts) {
     // if (creep.x === closestDroppedEnergy.x && creep.y === closestDroppedEnergy.y &&
@@ -269,19 +318,26 @@ function runBuilder(creep: Creep): void {
       }
     }
   } else {
+    planRamparts(creep, myConstructionSites);
+    planExtensions(creep, myConstructionSites);
     const site = findConstructionSiteToBuild(creep, mySpawn, myConstructionSites);
     if (site && creep.getRangeTo(site) < 3) {
       if (creep.x === site.x && creep.y === site.y && !(site.structure instanceof(StructureRampart))) moveWithinRange(creep, mySpawn, 3);
       creep.build(site);
     }
+    else if (site && creep.getRangeTo(site) > 3) {
+      moveWithinRange(creep, site, 3);
+    }
     else if (closestSwampContainer) {
       const rangeToSwampContainer = creep.getRangeTo(closestSwampContainer);
       if (rangeToSwampContainer < 2) {
-        planRamparts(creep, myConstructionSites);
-        planExtensions(creep, myConstructionSites);
-        creep.drop(RESOURCE_ENERGY);
+        // planRamparts(creep, myConstructionSites);
+        // planExtensions(creep, myConstructionSites);
+        // creep.drop(RESOURCE_ENERGY);
       } else if (rangeToSwampContainer > 1) {
-        creep.drop(RESOURCE_ENERGY);
+        // planRamparts(creep, myConstructionSites);
+        // planExtensions(creep, myConstructionSites);
+        // creep.drop(RESOURCE_ENERGY);
         moveWithinRange(creep, closestSwampContainer, 0);
       }
     }
@@ -324,11 +380,11 @@ function runMelee(creep: Creep): void {
 
   if (closestWall) attTarget = closestWall;
   if (closestWall && closestEnemyToCreep && wallRange && wallRange > creep.getRangeTo(closestEnemyToCreep)) attTarget = closestEnemyToCreep;
-  if (creep.getRangeTo(enemySpawn) < 8) attTarget = enemySpawn;
+  // if (creep.getRangeTo(enemySpawn) < 8 && !closestEnemyToCreep) attTarget = enemySpawn;
   if (!attTarget) attTarget = enemySpawn;
 
-  const nearbyEnemyMelees = enemyMelees.filter(e => e.getRangeTo(creep) < 4);
-  const nearbyEnemyRangers = enemyRangers.filter(e => e.getRangeTo(creep) < 4);
+  const nearbyEnemyMelees = enemyMelees.filter(e => e.getRangeTo(creep) < 5);
+  const nearbyEnemyRangers = enemyRangers.filter(e => e.getRangeTo(creep) < 5);
   const nearbyAllies = myCreeps.filter(a => a.getRangeTo(creep) < 3);
   const totalEnemyThreats = nearbyEnemyMelees.length + nearbyEnemyRangers.length;
   // totalEnemyThreats = closestEnemyToCreep;
@@ -354,7 +410,7 @@ function runMelee(creep: Creep): void {
     res = creep.attack(attTarget);
     if (attTarget !== closestWall) moveWithinRange(creep, mySpawn, 1);
   } else {
-    moveWithinRange(creep, attTarget, 1);
+    if (totalEnemyThreats <= nearbyAllies.length) moveWithinRange(creep, attTarget, 1);
     if (creep.getRangeTo(attTarget) < 2) res = creep.attack(attTarget);
   }
 
@@ -362,11 +418,11 @@ function runMelee(creep: Creep): void {
 }
 
 function runHealer(creep: Creep): void {
-  if (creep.hits < creep.hitsMax) {
-    creep.heal(creep);
-    flee(creep, mySpawn, enemyCreeps, 5);
-    return;
-  }
+  // if (creep.hits < creep.hitsMax) {
+  //   creep.heal(creep);
+  //   flee(creep, mySpawn, enemyCreeps, 5);
+  //   return;
+  // }
 
   const healTargets = myCreeps
     .filter(c => c.hits < c.hitsMax)
@@ -429,7 +485,7 @@ function runHealer(creep: Creep): void {
 
   if (healTarget && creep.getRangeTo(healTarget) < 4) {
     creep.rangedHeal(healTarget);
-    moveWithinRange(creep, mySpawn, 1);
+    // moveWithinRange(creep, mySpawn, 1);
   } else if (healTarget) {
     moveWithinRange(creep, healTarget, 1);
     if (creep.getRangeTo(healTarget) < 4) creep.rangedHeal(healTarget);
@@ -452,7 +508,6 @@ function runRanger(creep: Creep): void {
   const nearbyAllies = myCreeps.filter(a => a.getRangeTo(creep) < 3);
   const totalEnemyThreats = nearbyEnemyMelees.length + nearbyEnemyRangers.length;
   const targets = enemyCreeps.sort((a, b) => a.getRangeTo(creep) - b.getRangeTo(creep));
-  const closestRamparts = creep.findClosestByRange(myRamparts);
   const closestAllyBuilder = creep.findClosestByRange(myBuilders);
   const closestEnemyToCreep = creep.findClosestByRange(enemyCreeps);
   const closestEnemyToSpawn = mySpawn.findClosestByRange(enemyMelees) || mySpawn.findClosestByRange(enemyRangers) || mySpawn.findClosestByRange(enemyHealers) || mySpawn.findClosestByRange(enemyCreeps);
@@ -464,57 +519,50 @@ function runRanger(creep: Creep): void {
   if (closestEnemyToCreep && creep.getRangeTo(closestEnemyToCreep) < 10) attTarget = closestEnemyToCreep;
   if (closestEnemyToSpawn && closestEnemyToSpawnRange && mySpawn.getRangeTo(closestEnemyToSpawn) < 18) {}// { attTarget = closestEnemyToSpawn; }
   if (!attTarget) attTarget = targets.find(c => c);
-  if (!attTarget) attTarget = enemySpawn;
+  if (!attTarget || (enemyMelees.length === 0 && enemyRangers.length === 0)) attTarget = enemySpawn;
 
-  // if (totalEnemyThreats > nearbyAllies.length) {
-  //   // flee(creep, mySpawn, nearbyEnemyMelees, 8);
-  //   // if (target && creep.getRangeTo(target) <= 5)
-  //   if (attTarget && creep.getRangeTo(attTarget) <= 3) creep.rangedAttack(attTarget);
-  //   if (closestAllyBuilder && creep.getRangeTo(closestAllyBuilder) > 6) {
-  //     moveWithinRange(creep, closestAllyBuilder, 2);
-  //   } else {
-  //     moveWithinRange(creep, mySpawn, 3);
-  //   }
-  //   return;
-  // }
-
-  // Wait for heal if no enemies nearby
-  if (myHealers.length > 0 && totalEnemyThreats === 0 && creep.hits !== creep.hitsMax) {
-    // return;
-  }
-
-  if (totalEnemyThreats >= nearbyAllies.length) {
-    // if (creep.getRangeTo(enemySpawn) <= 3 && enemySpawn.spawning === undefined) {
-    //   const res = creep.rangedAttack(enemySpawn);
-    //   console.log(`Ranger attack result: ${res}`);
-    // } else if (attTarget && creep.getRangeTo(attTarget) <= 3) {
-    //   const res = creep.rangedAttack(attTarget);
-    //   console.log(`Ranger attack result: ${res}`);
-    // }
-
-    if (creep.getRangeTo(attTarget) <= 3) {
-      const res = creep.rangedAttack(attTarget);
-      console.log(`Ranger attack result: ${res}`);
+  // Handle fleeing to ramparts when outnumbered
+  if (totalEnemyThreats > nearbyAllies.length) {
+    // Attack if in range
+    if (attTarget && creep.getRangeTo(attTarget) <= 3) {
+      if (totalEnemyThreats > 2) {
+        const res = creep.rangedMassAttack();
+        console.log(`Ranger mass attack result: ${res}`);
+      } else {
+        const res = creep.rangedAttack(attTarget);
+        console.log(`Ranger attack result: ${res}`);
+      }
     }
 
-    // flee(creep, mySpawn, nearbyEnemyMelees, 8);
-    if (closestAllyBuilder) {
-      if (closestRamparts) {
-        moveWithinRange(creep, closestRamparts, 0);
-      } else {
-        moveWithinRange(creep, closestAllyBuilder, 2);
-      }
+    // Try to flee to an available rampart first
+    const closestAvailableRampart = findClosestAvailableRampart(creep, myRamparts, myCreeps);
+
+    if (closestAvailableRampart) {
+      moveWithinRange(creep, closestAvailableRampart, 0);
+    } else if (closestAllyBuilder) {
+      moveWithinRange(creep, closestAllyBuilder, 2);
     } else {
       moveWithinRange(creep, mySpawn, 3);
     }
     return;
   }
 
+  // Wait for heal if no enemies nearby
+  if (myHealers.length > 0 && totalEnemyThreats === 0 && creep.hits !== creep.hitsMax) {
+    // return;
+  }
+
   if (attTarget) {
     const range = creep.getRangeTo(attTarget);
 
     if (range <= 3) {
-      creep.rangedAttack(attTarget);
+      if (totalEnemyThreats > 2) {
+        const res = creep.rangedMassAttack();
+        console.log(`Ranger mass attack result: ${res}`);
+      } else {
+        const res = creep.rangedAttack(attTarget);
+        console.log(`Ranger attack result: ${res}`);
+      }
     }
 
     // moveWithinRange(creep, attTarget, 3);
@@ -533,7 +581,13 @@ function runRanger(creep: Creep): void {
   } else if (enemySpawn) {
     const range = creep.getRangeTo(enemySpawn);
     if (range <= 3) {
-      creep.rangedAttack(enemySpawn);
+      if (totalEnemyThreats > 2) {
+        const res = creep.rangedMassAttack();
+        console.log(`Ranger mass attack result: ${res}`);
+      } else {
+        const res = creep.rangedAttack(attTarget);
+        console.log(`Ranger attack result: ${res}`);
+      }
     } else {
       moveWithinRange(creep, enemySpawn, 3);
     }
@@ -548,6 +602,10 @@ function handleSpawning(): void {
     }
 
     if (getTicks() > 500 && getTotalSpawnEnergy(mySpawn, myExtensions) < 800) {
+      return;
+    }
+
+    if (getTicks() > 1000 && getTotalSpawnEnergy(mySpawn, myExtensions) < 1000) {
       return;
     }
 
@@ -626,7 +684,7 @@ function handleSpawning(): void {
         // console.log(`Failed to spawn Melee ${result.error}`);
       }
     }
-    else if (myBuilders.length <= enemyBuilders.length) {
+    else if (myBuilders.length <= enemyBuilders.length && getTotalSpawnEnergy(mySpawn, myExtensions) > 800) {
       const parts = getBuilderParts(mySpawn, myExtensions);
       const result = mySpawn.spawnCreep(parts);
       // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);

@@ -29,7 +29,7 @@
 
 // This stuff is arena-specific
 import { ATTACK, HEAL, RANGED_ATTACK } from "game/constants";
-import { Creep, GameObject, Position } from "game/prototypes";
+import { Creep, GameObject, /*Position*/ } from "game/prototypes";
 import { getDirection, getObjectsByPrototype, getRange, getTicks } from "game/utils";
 import { Flag } from 'arena/season_beta/capture_the_flag/basic/prototypes';
 import { Visual } from "game/visual";
@@ -104,7 +104,7 @@ function meleeAttacker(creep: Creep) {
 
   // melee attackers fight enemies near spawn
   // otherwise they move closer to their original defense position
-  if (targets.length > 0) {
+  if (targets.length > 0 && targets[0]) {
     creep.moveTo(targets[0]);
     creep.attack(targets[0]);
   } else {
@@ -115,7 +115,7 @@ function meleeAttacker(creep: Creep) {
 function rangedAttacker(creep: Creep) {
   const targets = enemyCreeps.sort((a, b) => getRange(a, creep) - getRange(b, creep));
 
-  if (targets.length > 0) {
+  if (targets.length > 0 && targets[0]) {
     creep.rangedAttack(targets[0]);
   }
 
@@ -133,7 +133,7 @@ function rangedAttacker(creep: Creep) {
 function healer(creep: Creep) {
   const targets = myCreeps.filter(i => i !== creep && i.hits < i.hitsMax).sort((a, b) => a.hits - b.hits);
 
-  if (targets.length) {
+  if (targets.length && targets[0]) {
     creep.moveTo(targets[0]);
   } else {
     if (enemyFlag) {
@@ -143,7 +143,7 @@ function healer(creep: Creep) {
 
   const healTargets = myCreeps.filter(i => getRange(i, creep) <= 3).sort((a, b) => a.hits - b.hits);
 
-  if (healTargets.length > 0) {
+  if (healTargets.length > 0 && healTargets[0]) {
     if (getRange(healTargets[0], creep) === 1) {
       creep.heal(healTargets[0]);
     } else {
@@ -168,7 +168,7 @@ function flee(creep: Creep, targets: GameObject[], range: number) {
     targets.map(i => ({ pos: i, range })),
     { flee: true }
   );
-  if (result.path.length > 0) {
+  if (result.path.length > 0 && result.path[0]) {
     const direction = getDirection(result.path[0].x - creep.x, result.path[0].y - creep.y);
     creep.move(direction);
   }

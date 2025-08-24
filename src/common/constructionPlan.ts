@@ -144,15 +144,15 @@ export function planRamparts(
       }
   }
 
-  const existingRampartSite2 = allyConstructionSites.find(site => site.x === creep.x + 1 && site.y === creep.y + 1 && site.structure instanceof(StructureRampart));
-  if (!existingRampartSite2) {
-    const createSiteResult = createConstructionSite({x: creep.x + 1, y: creep.y + 1}, StructureRampart);
-    if (createSiteResult.object) {
-        console.log(`Site created: ${createSiteResult.object.id}`);
-      } else if (createSiteResult.error) {
-        console.log(`Site creation failed with error: ${createSiteResult.error}`);
-      }
-  }
+  // const existingRampartSite2 = allyConstructionSites.find(site => site.x === creep.x + 1 && site.y === creep.y + 1 && site.structure instanceof(StructureRampart));
+  // if (!existingRampartSite2) {
+  //   const createSiteResult = createConstructionSite({x: creep.x + 1, y: creep.y + 1}, StructureRampart);
+  //   if (createSiteResult.object) {
+  //       console.log(`Site created: ${createSiteResult.object.id}`);
+  //     } else if (createSiteResult.error) {
+  //       console.log(`Site creation failed with error: ${createSiteResult.error}`);
+  //     }
+  // }
 
   const existingRampartSite3 = allyConstructionSites.find(site => site.x === creep.x - 1 && site.y === creep.y - 1 && site.structure instanceof(StructureRampart));
   if (!existingRampartSite3) {

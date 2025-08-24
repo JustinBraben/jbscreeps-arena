@@ -2,7 +2,7 @@ import { StructureExtension, StructureSpawn } from "game/prototypes";
 import { getObjectsByPrototype } from "game/utils";
 
 export function getMyExtensions(): StructureExtension[] {
-  return getObjectsByPrototype(StructureExtension).filter(extension => extension.my && extension.hits > 0);
+  return getObjectsByPrototype(StructureExtension).filter(extension => extension.my && extension.hits > 0 && extension.exists);
 }
 
 export function getMyExtensionsToFill(): StructureExtension[] {
