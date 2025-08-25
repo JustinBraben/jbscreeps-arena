@@ -25,7 +25,7 @@ export function loop(): void {
   }
 
   // Spawn logic - follow the build order
-  if (creepManager.personalSpawn !== undefined &&
+  if (creepManager.personalSpawn &&
       creepManager.personalSpawn.store.energy >= 200 &&
       buildQueue.length > 0) {
     // console.log(`Current buildQueue: ${buildQueue}`);

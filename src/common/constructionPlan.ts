@@ -1,11 +1,10 @@
-import { ConstructionSite, Creep, Position, StructureContainer, StructureExtension, StructureRampart, StructureSpawn } from "game/prototypes";
-import { createConstructionSite, getTicks } from "game/utils";
+import { ConstructionSite, Position, StructureContainer, StructureExtension, StructureRampart, StructureSpawn } from "game/prototypes";
+import { createConstructionSite } from "game/utils";
 
 
 export function planConstructionSites(
   allySpawn: StructureSpawn,
   allyConstructionSites: ConstructionSite[],
-  allyRamparts: StructureRampart[],
   swampContainers: StructureContainer[],
   extensionRange: number,
 ): void {
@@ -21,7 +20,7 @@ export function planConstructionSites(
   //   createConstructionSite({x: allySpawn.x, y: allySpawn.y - 2}, StructureExtension).object;
   // }
 
-  createInitialSpawnRamparts(allySpawn, allyConstructionSites, allyRamparts);
+  createInitialSpawnRamparts(allySpawn, allyConstructionSites);
 
   // const existingSite3 = constructionSites.find(s => allySpawn !== undefined && s.x === allySpawn.x && s.y === allySpawn.y + 5);
   // let constructSite3 = null;
@@ -47,23 +46,12 @@ export function planConstructionSites(
 export function createInitialSpawnRamparts(
   allySpawn: StructureSpawn,
   allyConstructionSites: ConstructionSite[],
-  allyRamparts: StructureRampart[],
 ): void {
-  const existingSpawnRampart = allyConstructionSites.find(s => allySpawn !== undefined && s.structure instanceof(StructureRampart) && s.x === allySpawn.x && s.y === allySpawn.y);
-  if (!existingSpawnRampart) {
-    // Check if rampart already exists
-    // const ramparts = getObjectsByPrototype(StructureRampart).filter(r => r.my);
-    const spawnRampartExists = allyRamparts.some(r =>
-      r.x === allySpawn.x && r.y === allySpawn.y
-    );
-
-    if (!spawnRampartExists && getTicks() === 500) {
-      createConstructionSite(
-        { x: allySpawn.x, y: allySpawn.y },
-        StructureRampart
-      );
-    }
-  }
+  // planRamparts(allySpawn, allyConstructionSites);
+  // planRamparts({ x: allySpawn.x, y: allySpawn.y - 1 }, allyConstructionSites);
+  // planRamparts({ x: allySpawn.x, y: allySpawn.y + 1 }, allyConstructionSites);
+  planRamparts({ x: allySpawn.x - 1, y: allySpawn.y }, allyConstructionSites);
+  planRamparts({ x: allySpawn.x + 1, y: allySpawn.y }, allyConstructionSites);
 }
 
 export function createSwampExtensions(
@@ -131,12 +119,12 @@ export function planRemoveExtensionConstructionSites(
 }
 
 export function planRamparts(
-  creep: Creep,
+  pos: Position,
   allyConstructionSites: ConstructionSite[],
 ): void {
-  const existingRampartSite = allyConstructionSites.find(site => site.x === creep.x && site.y === creep.y && site.structure instanceof(StructureRampart));
+  const existingRampartSite = allyConstructionSites.find(site => site.x === pos.x && site.y === pos.y && site.structure instanceof(StructureRampart));
   if (!existingRampartSite) {
-    const createSiteResult = createConstructionSite({x: creep.x, y: creep.y}, StructureRampart);
+    const createSiteResult = createConstructionSite({x: pos.x, y: pos.y}, StructureRampart);
     if (createSiteResult.object) {
         console.log(`Site created: ${createSiteResult.object.id}`);
       } else if (createSiteResult.error) {
@@ -144,19 +132,19 @@ export function planRamparts(
       }
   }
 
-  // const existingRampartSite2 = allyConstructionSites.find(site => site.x === creep.x + 1 && site.y === creep.y + 1 && site.structure instanceof(StructureRampart));
-  // if (!existingRampartSite2) {
-  //   const createSiteResult = createConstructionSite({x: creep.x + 1, y: creep.y + 1}, StructureRampart);
-  //   if (createSiteResult.object) {
-  //       console.log(`Site created: ${createSiteResult.object.id}`);
-  //     } else if (createSiteResult.error) {
-  //       console.log(`Site creation failed with error: ${createSiteResult.error}`);
-  //     }
-  // }
+  const existingRampartSite2 = allyConstructionSites.find(site => site.x === pos.x + 1 && site.y === pos.y + 1 && site.structure instanceof(StructureRampart));
+  if (!existingRampartSite2) {
+    const createSiteResult = createConstructionSite({x: pos.x + 1, y: pos.y + 1}, StructureRampart);
+    if (createSiteResult.object) {
+        console.log(`Site created: ${createSiteResult.object.id}`);
+      } else if (createSiteResult.error) {
+        console.log(`Site creation failed with error: ${createSiteResult.error}`);
+      }
+  }
 
-  const existingRampartSite3 = allyConstructionSites.find(site => site.x === creep.x - 1 && site.y === creep.y - 1 && site.structure instanceof(StructureRampart));
+  const existingRampartSite3 = allyConstructionSites.find(site => site.x === pos.x - 1 && site.y === pos.y - 1 && site.structure instanceof(StructureRampart));
   if (!existingRampartSite3) {
-    const createSiteResult = createConstructionSite({x: creep.x - 1, y: creep.y - 1}, StructureRampart);
+    const createSiteResult = createConstructionSite({x: pos.x - 1, y: pos.y - 1}, StructureRampart);
     if (createSiteResult.object) {
         console.log(`Site created: ${createSiteResult.object.id}`);
       } else if (createSiteResult.error) {
@@ -166,12 +154,12 @@ export function planRamparts(
 }
 
 export function planExtensions(
-  creep: Creep,
+  pos: Position,
   allyConstructionSites: ConstructionSite[],
 ): void {
-  const existingExtensionSite = allyConstructionSites.find(site => site.x === creep.x && site.y === creep.y - 1 && site.structure instanceof(StructureExtension));
+  const existingExtensionSite = allyConstructionSites.find(site => site.x === pos.x && site.y === pos.y - 1 && site.structure instanceof(StructureExtension));
   if (!existingExtensionSite) {
-    const createSiteResult = createConstructionSite({x: creep.x, y: creep.y - 1}, StructureExtension);
+    const createSiteResult = createConstructionSite({x: pos.x, y: pos.y - 1}, StructureExtension);
     if (createSiteResult.object) {
         console.log(`Site created: ${createSiteResult.object.id}`);
       } else if (createSiteResult.error) {
@@ -179,9 +167,9 @@ export function planExtensions(
       }
   }
 
-  const existingExtensionSite2 = allyConstructionSites.find(site => site.x === creep.x + 1 && site.y === creep.y && site.structure instanceof(StructureExtension));
+  const existingExtensionSite2 = allyConstructionSites.find(site => site.x === pos.x && site.y === pos.y + 1 && site.structure instanceof(StructureExtension));
   if (!existingExtensionSite2) {
-    const createSiteResult = createConstructionSite({x: creep.x + 1, y: creep.y}, StructureExtension);
+    const createSiteResult = createConstructionSite({x: pos.x, y: pos.y + 1}, StructureExtension);
     if (createSiteResult.object) {
         console.log(`Site created: ${createSiteResult.object.id}`);
       } else if (createSiteResult.error) {
@@ -189,13 +177,38 @@ export function planExtensions(
       }
   }
 
-  const existingExtensionSite3 = allyConstructionSites.find(site => site.x === creep.x - 1 && site.y === creep.y - 2 && site.structure instanceof(StructureExtension));
+  const existingExtensionSite3 = allyConstructionSites.find(site => site.x + 1 === pos.x && site.y === pos.y && site.structure instanceof(StructureExtension));
   if (!existingExtensionSite3) {
-    const createSiteResult = createConstructionSite({x: creep.x - 1, y: creep.y - 2}, StructureExtension);
+    const createSiteResult = createConstructionSite({x: pos.x + 1, y: pos.y}, StructureExtension);
     if (createSiteResult.object) {
         console.log(`Site created: ${createSiteResult.object.id}`);
       } else if (createSiteResult.error) {
         console.log(`Site creation failed with error: ${createSiteResult.error}`);
       }
   }
+
+  const existingExtensionSite4 = allyConstructionSites.find(site => site.x === pos.x - 1 && site.y === pos.y && site.structure instanceof(StructureExtension));
+  if (!existingExtensionSite4) {
+    const createSiteResult = createConstructionSite({x: pos.x - 1, y: pos.y}, StructureExtension);
+    if (createSiteResult.object) {
+        console.log(`Site created: ${createSiteResult.object.id}`);
+      } else if (createSiteResult.error) {
+        console.log(`Site creation failed with error: ${createSiteResult.error}`);
+      }
+  }
+
+  // const existingExtensionSite = allyConstructionSites.filter(site => Math.abs(site.x - pos.x) < 2 && Math.abs(site.y - pos.y) && site.structure instanceof(StructureExtension));
+  // if (!existingExtensionSite) {
+  //   for (const xOffset of [-1, 1]) {
+  //     for (const yOffset of [-1, 1]) {
+  //       const createSiteResult = createConstructionSite({x: pos.x + xOffset, y: pos.y + yOffset}, StructureExtension);
+  //       if (createSiteResult.object) {
+  //         console.log(`Site created: ${createSiteResult.object.id}`);
+  //         break;
+  //       } else if (createSiteResult.error) {
+  //         console.log(`Site creation failed with error: ${createSiteResult.error}`);
+  //       }
+  //     }
+  //   }
+  // }
 }

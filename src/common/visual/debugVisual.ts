@@ -1,7 +1,7 @@
 import { findPath, getTerrainAt } from 'game/utils';
 import { StructureSpawn, StructureContainer, Position } from 'game/prototypes';
 import { Visual } from 'game/visual';
-import { TERRAIN_WALL, TERRAIN_PLAIN } from 'game/constants';
+import { TERRAIN_WALL, TERRAIN_PLAIN, TerrainConstant } from 'game/constants';
 import { DefaultFindPathOptions } from 'common/constants';
 
 export function debugContainerPathsToSpawn(
@@ -122,4 +122,136 @@ export function debugTileCost(
       }
     }
   }
+}
+
+export function debugSpawnExits(
+  gameVisual: Visual,
+  allySpawnTopPath: Position[],
+  allySpawnBottomPath: Position[],
+  enemySpawnTopPath: Position[],
+  enemySpawnBottomPath: Position[],
+): void {
+ gameVisual.poly(
+  allySpawnTopPath,
+    {
+      lineStyle: 'dashed',
+      stroke: '#0dff00ff',
+    }
+ );
+
+  gameVisual.poly(
+  allySpawnBottomPath,
+    {
+      lineStyle: 'dashed',
+      stroke: '#0dff00ff',
+    }
+ );
+
+  gameVisual.poly(
+  enemySpawnTopPath,
+    {
+      lineStyle: 'dashed',
+      stroke: '#ff1900ff',
+    }
+ );
+
+  gameVisual.poly(
+  enemySpawnBottomPath,
+    {
+      lineStyle: 'dashed',
+      stroke: '#ff1900ff',
+    }
+ );
+}
+
+export function makeSpawnBottomExitPosition(
+  spawn: StructureSpawn,
+): Position[] {
+  let exit: Position[] = [];
+
+   if (spawn.x === 94) {
+
+  // (13, 45)
+
+  let currX = 13;
+  let currY = 45;
+
+  let currentBlock: TerrainConstant = TERRAIN_WALL;
+
+  while (currY < 99) {
+    currentBlock = getTerrainAt({ x: currX, y: currY});
+
+    if (currentBlock !== TERRAIN_WALL) {
+      exit.push({ x: currX, y: currY });
+    }
+
+    currY += 1;
+  }
+
+ } else if (spawn.x === 5) {
+  // (86, 54)
+
+  let currX = 86;
+  let currY = 54;
+
+  let currentBlock: TerrainConstant = TERRAIN_WALL;
+
+  while (currY < 99) {
+    currentBlock = getTerrainAt({ x: currX, y: currY});
+
+    if (currentBlock !== TERRAIN_WALL) {
+      exit.push({ x: currX, y: currY });
+    }
+
+    currY += 1;
+  }
+ }
+
+ return exit;
+}
+
+export function makeSpawnTopExitPosition(
+  spawn: StructureSpawn,
+): Position[] {
+  let exit: Position[] = [];
+
+   if (spawn.x === 94) {
+
+  // (13, 45)
+
+  let currX = 13;
+  let currY = 45;
+
+  let currentBlock: TerrainConstant = TERRAIN_WALL;
+
+  while (currY > 0) {
+    currentBlock = getTerrainAt({ x: currX, y: currY});
+
+    if (currentBlock !== TERRAIN_WALL) {
+      exit.push({ x: currX, y: currY });
+    }
+
+    currY -= 1;
+  }
+
+ } else if (spawn.x === 5) {
+  // (86, 54)
+
+  let currX = 86;
+  let currY = 54;
+
+  let currentBlock: TerrainConstant = TERRAIN_WALL;
+
+  while (currY > 0) {
+    currentBlock = getTerrainAt({ x: currX, y: currY});
+
+    if (currentBlock !== TERRAIN_WALL) {
+      exit.push({ x: currX, y: currY });
+    }
+
+    currY -= 1;
+  }
+ }
+
+ return exit;
 }

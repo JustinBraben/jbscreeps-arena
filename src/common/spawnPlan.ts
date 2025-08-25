@@ -69,26 +69,12 @@ export function getBuilderParts(spawn: StructureSpawn, extensions: StructureExte
 }
 
 export function getMeleeParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [MOVE, MOVE, ATTACK];
+  let parts: BodyPartConstant[] = [MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
-    if (BODYPART_COST[MOVE] + BODYPART_COST[MOVE] + BODYPART_COST[ATTACK] + partsCost > spawnEnergy) {
-      break;
-    }
-
     if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
       parts.push(MOVE);
-    }
-    partsCost = getPartsEnergy(parts);
-
-    if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
-      parts.push(MOVE);
-    }
-    partsCost = getPartsEnergy(parts);
-
-    if (BODYPART_COST[ATTACK] + partsCost <= spawnEnergy) {
-      parts.push(ATTACK);
     }
     partsCost = getPartsEnergy(parts);
 
@@ -125,21 +111,21 @@ export function getRangerParts(spawn: StructureSpawn, extensions: StructureExten
 
 // TODO: FIX
 export function getHealerParts(spawn: StructureSpawn, extensions: StructureExtension[]): BodyPartConstant[] {
-  let parts: BodyPartConstant[] = [HEAL, MOVE];
+  let parts: BodyPartConstant[] = [HEAL, HEAL, MOVE];
   let partsCost = getPartsEnergy(parts);
   const spawnEnergy = getTotalSpawnEnergy(spawn, extensions);
   while (partsCost < spawnEnergy) {
-    if (BODYPART_COST[HEAL] + partsCost <= spawnEnergy) {
-      parts.push(HEAL);
+    if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
+      parts.push(MOVE);
     } else {
       break;
     }
     partsCost = getPartsEnergy(parts);
 
-    if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
-      parts.push(MOVE);
-    }
-    partsCost = getPartsEnergy(parts);
+    // if (BODYPART_COST[MOVE] + partsCost <= spawnEnergy) {
+    //   parts.push(MOVE);
+    // }
+    // partsCost = getPartsEnergy(parts);
 
     if (spawnEnergy - partsCost <= 49) break;
   }
