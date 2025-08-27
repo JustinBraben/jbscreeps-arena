@@ -98,7 +98,7 @@ export function getRangers(creeps: Creep[]): Creep[] {
 }
 
 export function getHealers(creeps: Creep[]): Creep[] {
-  return creeps.filter(creep => creep.body.some(part => part.type === HEAL));
+  return creeps.filter(creep => creep.body.some(part => part.type === HEAL) && !creep.spawning);
 }
 
 export function getCreepsWithinRangeOfCreep(creep: Creep, potentialCreeps: Creep[], range: number): Creep[] {

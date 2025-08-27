@@ -7,4 +7,9 @@ export enum Role {
   HAULER = "\u26CF"
 }
 
+export enum ContainerRegion {
+  SPAWN,
+  SWAMP,
+}
+
 // export type Role = RoleSpawnAndSwamp;

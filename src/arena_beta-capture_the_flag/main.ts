@@ -31,15 +31,9 @@
 import { ATTACK, HEAL, RANGED_ATTACK } from "game/constants";
 import { Creep, GameObject, /*Position*/ } from "game/prototypes";
 import { getDirection, getObjectsByPrototype, getRange, getTicks } from "game/utils";
-import { Flag } from 'arena/season_beta/capture_the_flag/basic/prototypes';
+import { Flag } from "arena/season_beta/capture_the_flag/basic/prototypes";
 import { Visual } from "game/visual";
 import { searchPath } from "game/path-finder";
-
-declare module "game/prototypes" {
-  interface Creep {
-    initialPos: Position;
-  }
-}
 
 // You can also import your files like this:
 // import {roleAttacker} from './roles/attacker.mjs';
@@ -81,8 +75,8 @@ export function loop(): void {
 
 function meleeAttacker(creep: Creep) {
   // Here is the alternative to the creep "memory" from Screeps World. All game objects are persistent. You can assign any property to it once, and it will be available during the entire match.
-  if (!creep.initialPos) {
-    creep.initialPos = { x: creep.x, y: creep.y };
+  if (!creep._initialPos) {
+    creep._initialPos = { x: creep.x, y: creep.y };
   }
 
   new Visual().text(
@@ -99,7 +93,7 @@ function meleeAttacker(creep: Creep) {
   // Sort them by closest to furthest range from melee attacker
   // helps defend spawn
   const targets = enemyCreeps
-    .filter(i => getRange(i, creep.initialPos) < 10)
+    .filter(i => getRange(i, creep._initialPos) < 10)
     .sort((a, b) => getRange(a, creep) - getRange(b, creep));
 
   // melee attackers fight enemies near spawn
@@ -108,7 +102,7 @@ function meleeAttacker(creep: Creep) {
     creep.moveTo(targets[0]);
     creep.attack(targets[0]);
   } else {
-    creep.moveTo(creep.initialPos);
+    creep.moveTo(creep._initialPos);
   }
 }
 

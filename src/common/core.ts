@@ -1,13 +1,9 @@
-import { Role, RoleSpawnAndSWamp } from 'common/enums/role';
+import { Role } from 'common/enums/role';
 import { arenaInfo } from 'game';
 import { Creep } from 'game/prototypes';
-import { applyMixin } from 'common/prototype/applyMixin';
 import { getObjectsByPrototype, getTicks } from 'game/utils';
-
-export class RoleMixin extends Creep {
-  role: Role = RoleSpawnAndSWamp.Miner;
-}
-applyMixin(Creep, RoleMixin);
+import { setCreepState } from './lib/creep';
+// import { getEnemyCreeps, getMyCreeps } from './filterCreeps';
 
 /**
  * Common Core class.
@@ -17,7 +13,7 @@ applyMixin(Creep, RoleMixin);
 export class Core {
   public tick: number = 0;
   public myCreeps: Array<Creep> = new Array<Creep>();
-  public myCreepsByRole: Map<Role, Array<Creep>> = new Map<Role, Array<Creep>>();
+  public myCreepsByRole: Partial<Record<Role, Creep[]>> = {};
   public enemyCreeps: Array<Creep> = new Array<Creep>();
 
   public run() {
@@ -28,18 +24,19 @@ export class Core {
       console.log(`✨Arena: ${name} [${level}]`);
     }
 
-    this.myCreeps = new Array<Creep>();
-    this.enemyCreeps = new Array<Creep>();
-    this.myCreepsByRole = new Map<Role, Array<Creep>>();
+    this.myCreeps = [];
+    this.enemyCreeps = [];
+    this.myCreepsByRole = {};
 
     const creeps = getObjectsByPrototype(Creep).filter(c => c.hits);
 
-    // Go throuugh all creeps
-    // Add them to your creeps if they are yours
-    // otherwise add them to enemyCreeps
     for (const c of creeps) {
       if (c.my) {
         this.myCreeps.push(c);
+        if (c._role) {
+          this.myCreepsByRole[c._role] = this.getAllOfRole(c._role);
+          this.myCreepsByRole[c._role]!.push(c);
+        }
       } else {
         this.enemyCreeps.push(c);
       }
@@ -47,22 +44,14 @@ export class Core {
   }
 
   public getAllOfRole(role: Role): Array<Creep> {
-    if (this.myCreepsByRole.has(role)) {
-      let arr = this.myCreepsByRole.get(role);
-      if (arr !== undefined) {
-        return arr;
-      }
-    }
-    let newArr = new Array<Creep>();
-    this.myCreepsByRole.set(role, newArr);
-    return newArr;
+    return this.myCreepsByRole[role] ?? [];
   }
 
   public getCreeps(role?: Role): Array<Creep> {
     return role !== undefined ? this.getAllOfRole(role) : this.myCreeps;
   }
 
-  public runCreeps<TCore extends Core>(role: number, runRole: (creep: Creep, core: TCore) => void) {
+  public runCreeps<TCore extends Core>(role: Role, runRole: (creep: Creep, core: TCore) => void) {
     for (const creep of this.getAllOfRole(role)) {
       if (this.creepShouldRun(creep)) {
         runRole(creep, this as unknown as TCore);
@@ -76,6 +65,10 @@ export class Core {
     }
 
     // Reset creep states before running creep role logic
+    if (creep._state) {
+      creep._states = [];
+      setCreepState(creep, creep._state);
+    }
 
     return true;
   }
