@@ -388,16 +388,6 @@ function runHealer(creep: Creep): void {
 
   const closestAlly = creep.findClosestByRange(myCreeps);
 
-  // // Stay away from enemies
-  // const nearbyEnemy = creep.findClosestByRange(enemyCreeps);
-  // if (nearbyEnemy && creep.getRangeTo(nearbyEnemy) < 2) {
-  //   // if (healTarget && creep.getRangeTo(healTarget) < 4) creep.rangedHeal(healTarget);
-  //   creep.heal(creep);
-  //   if (closestAlly) moveWithinRange(creep, closestAlly, 1);
-  //   // flee(creep, mySpawn, enemyCreeps, 5);
-  //   return;
-  // }
-
   if (!healTarget) healTarget = attacker;
   if (!healTarget) healTarget = ranger;
   if (!healTarget) healTarget = healer;
@@ -599,122 +589,6 @@ function handleSpawning(): void {
         // console.log(`Failed to spawn Melee ${result.error}`);
       }
     }
-
-    // if (myHaulers.length < 2) {
-    //   const parts = getHaulerParts(mySpawn, myExtensions);
-    //   const result = mySpawn.spawnCreep(parts);
-    //   if (result.object) {
-    //     console.log(`Spawning Hauler: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-    //   } else if(result.error) {
-    //     // console.log(`Failed to spawn Hauler ${result.error}`);
-    //   }
-    // }
-    // else if (myBuilders.length < 1) {
-    //   const parts = getBuilderParts(mySpawn, myExtensions);
-    //   const result = mySpawn.spawnCreep(parts);
-    //   if (result.object) {
-    //     console.log(`Spawning Builder: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-    //   } else if(result.error) {
-    //     // console.log(`Failed to spawn Melee ${result.error}`);
-    //   }
-    // }
-    // else if (myRangers.length < 1) {
-    //   const parts = getRangerParts(mySpawn, myExtensions);
-    //   const result = mySpawn.spawnCreep(parts);
-    //   // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
-    //   if (result.object) {
-    //     console.log(`Spawning Ranger: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-    //   } else if(result.error) {
-    //     // console.log(`Failed to spawn Melee ${result.error}`);
-    //   }
-    // }
-    // else if (myMelees.length < 2) {
-    //   const parts = getMeleeParts(mySpawn, myExtensions);
-    //   const result = mySpawn.spawnCreep(parts);
-    //   // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
-    //   if (result.object) {
-    //     console.log(`Spawning Melee: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-    //   } else if(result.error) {
-    //     // console.log(`Failed to spawn Melee ${result.error}`);
-    //   }
-    // }
-    // else if (myHealers.length < myMelees.length + myRangers.length && getTotalSpawnEnergy(mySpawn, myExtensions) > 800) {
-    //   const parts = getHealerParts(mySpawn, myExtensions);
-    //   const result = mySpawn.spawnCreep(parts);
-    //   // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
-    //   if (result.object) {
-    //     console.log(`Spawning Healer: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-    //   } else if(result.error) {
-    //     // console.log(`Failed to spawn Melee ${result.error}`);
-    //   }
-    // }
-    // else if (myMelees.length < enemyMelees.length) {
-    //   const parts = getMeleeParts(mySpawn, myExtensions);
-    //   const result = mySpawn.spawnCreep(parts);
-    //   // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
-    //   if (result.object) {
-    //     console.log(`Spawning Melee: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-    //   } else if(result.error) {
-    //     // console.log(`Failed to spawn Melee ${result.error}`);
-    //   }
-    // }
-    // else if (myRangers.length < enemyRangers.length) {
-    //   const parts = getRangerParts(mySpawn, myExtensions);
-    //   const result = mySpawn.spawnCreep(parts);
-    //   // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
-    //   if (result.object) {
-    //     console.log(`Spawning Ranger: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-    //   } else if(result.error) {
-    //     // console.log(`Failed to spawn Melee ${result.error}`);
-    //   }
-    // }
-    // else if (myBuilders.length <= enemyBuilders.length && getTotalSpawnEnergy(mySpawn, myExtensions) > 800) {
-    //   const parts = getBuilderParts(mySpawn, myExtensions);
-    //   const result = mySpawn.spawnCreep(parts);
-    //   // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
-    //   if (result.object) {
-    //     console.log(`Spawning Builder: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-    //   } else if(result.error) {
-    //     // console.log(`Failed to spawn Melee ${result.error}`);
-    //   }
-    // } else if (myHaulers.length <= enemyHaulers.length && myBuilders.length < 5) {
-    //   const parts = getHaulerParts(mySpawn, myExtensions);
-    //   const result = mySpawn.spawnCreep(parts);
-    //   // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
-    //   if (result.object) {
-    //     console.log(`Spawning Hauler: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-    //   } else if(result.error) {
-    //     // console.log(`Failed to spawn Melee ${result.error}`);
-    //   }
-    // } else if (myBuilders.length < 5) {
-    //   const parts = getBuilderParts(mySpawn, myExtensions);
-    //   const result = mySpawn.spawnCreep(parts);
-    //   // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
-    //   if (result.object) {
-    //     console.log(`Spawning Builder: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-    //   } else if(result.error) {
-    //     // console.log(`Failed to spawn Melee ${result.error}`);
-    //   }
-    // } else if (myHaulers.length < 12) {
-    //   const parts = getHaulerParts(mySpawn, myExtensions);
-    //   const result = mySpawn.spawnCreep(parts);
-    //   // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
-    //   if (result.object) {
-    //     console.log(`Spawning Hauler: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-    //   } else if(result.error) {
-    //     // console.log(`Failed to spawn Melee ${result.error}`);
-    //   }
-    // }
-    // else {
-    //   const parts = getRangerParts(mySpawn, myExtensions);
-    //   const result = mySpawn.spawnCreep(parts);
-    //   // const result = mySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK]);
-    //   if (result.object) {
-    //     console.log(`Spawning Melee: ${result.object.id} (Health: ${result.object.hits}/${result.object.hitsMax})`);
-    //   } else if(result.error) {
-    //     // console.log(`Failed to spawn Melee ${result.error}`);
-    //   }
-    // }
   }
 }
 
